@@ -1,0 +1,37 @@
+<!--
+  ~ /*
+  ~  Copyright (c) 2021. Mark Grechanik and Lone Star Consulting, Inc. All rights reserved.
+  ~
+  ~   Unless required by applicable law or agreed to in writing, software distributed under
+  ~   the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+  ~   either express or implied.  See the License for the specific language governing permissions and limitations under the License.
+  ~  */
+  -->
+
+<configuration scan="true" scanPeriod="60 seconds" trace="true">
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Daily rollover -->
+            <fileNamePattern>log/Seaphish.%d{yyyy-MM-dd}.log</fileNamePattern>
+
+            <maxHistory>100</maxHistory>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Configure so that it outputs to both console and log file -->
+    <root level="INFO">
+        <appender-ref ref="FILE" />
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>
