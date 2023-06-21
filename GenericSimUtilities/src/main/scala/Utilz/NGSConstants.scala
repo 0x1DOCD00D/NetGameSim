@@ -52,6 +52,7 @@ object NGSConstants:
   val GRAPHWALKTERMINATIONPOLICY = "graphWalkTerminationPolicy"
   val GRAPHWALKNODETERMINATIONPROBABILITY = "graphWalkNodeTerminationProbability"
   val GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT = 0.05d
+  val OUTPUTDIRECTORY = "outputDirectory"
 
   val MALAPPBUDGET = "malAppBudget"
   val MALAPPBUDGETDEFAULT = 100.0d

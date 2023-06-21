@@ -8,6 +8,7 @@ import Utilz.NGSConstants.{ACTIONRANGE, ACTIONRANGEDEFAULT, CONNECTEDNESS, CONNE
 import com.google.common.graph.*
 import org.slf4j.Logger
 
+import java.io.File
 import scala.collection.immutable.TreeSeqMap.OrderBy
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
@@ -103,6 +104,16 @@ object NetModelAlgebra:
   val maxWalkPathLengthCoeff: Double = getConfigEntry(NGSConstants.configNetGameModel,MAXWALKPATHLENGTHCOEFF, MAXWALKPATHLENGTHCOEFFDEFAULT)
   val graphWalkTerminationPolicy: String = getConfigEntry(NGSConstants.configNetGameModel,GRAPHWALKTERMINATIONPOLICY, GRAPHWALKTERMINATIONPOLICYDEFAULT)
   val graphWalkNodeTerminationProbability: Double = getConfigEntry(NGSConstants.configNetGameModel,GRAPHWALKNODETERMINATIONPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT)
+  val outputDirectory: String = {
+    val defDir = new java.io.File(".").getCanonicalPath
+    val dir: String = getConfigEntry(NGSConstants.configNetGameModel, NGSConstants.OUTPUTDIRECTORY, defDir)
+    val ref = new File(dir)
+    if ref.exists() && ref.isDirectory then
+      if dir.endsWith("/") then dir else dir + "/"
+    else
+      logger.error(s"Output directory $dir does not exist or is not a directory, using current directory $defDir")
+      defDir
+  }
   val MAXPATHLENGTHTC:String = "maxpathlength"
   val UNTILCYCLETC:String = "untilcycle"
   val ALLTC:String = "all"

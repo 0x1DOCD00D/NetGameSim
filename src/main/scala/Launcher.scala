@@ -33,12 +33,11 @@ object Launcher:
 
     val config = ConfigFactory.load()
     logger.info("for the main entry")
-    config.getConfig("SeaphishSimulator").entrySet().forEach(e => logger.info(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
+    config.getConfig("NGSimulator").entrySet().forEach(e => logger.info(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
     logger.info("for the NetModel entry")
-    config.getConfig("SeaphishSimulator").getConfig("NetModel").entrySet().forEach(e => logger.info(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
-    val spActorSystemName: String = scala.util.Try(config.getConfig("SeaphishSimulator").getString("name")) match
-      case scala.util.Success(value) => value
-      case scala.util.Failure(exception) => "SeaphishSimulatorSystem" //may come from the command line
+    config.getConfig("NGSimulator").getConfig("NetModel").entrySet().forEach(e => logger.info(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
+    val currentDirectory = new java.io.File(".").getCanonicalPath + "/"
+    logger.info(s"currentDirectory: $currentDirectory")
 
 
 
