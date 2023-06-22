@@ -106,12 +106,13 @@ object NetModelAlgebra:
   val graphWalkNodeTerminationProbability: Double = getConfigEntry(NGSConstants.configNetGameModel,GRAPHWALKNODETERMINATIONPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT)
   val outputDirectory: String = {
     val defDir = new java.io.File(".").getCanonicalPath
-    val dir: String = getConfigEntry(NGSConstants.configNetGameModel, NGSConstants.OUTPUTDIRECTORY, defDir)
+    val dir: String = getConfigEntry(NGSConstants.globalConfig, NGSConstants.OUTPUTDIRECTORY, defDir)
     val ref = new File(dir)
     if ref.exists() && ref.isDirectory then
+      logger.info(s"Using output directory: $dir")
       if dir.endsWith("/") then dir else dir + "/"
     else
-      logger.error(s"Output directory $dir does not exist or is not a directory, using current directory $defDir")
+      logger.error(s"Output directory $dir does not exist or is not a directory, using current directory instead: $defDir")
       defDir
   }
   val MAXPATHLENGTHTC:String = "maxpathlength"

@@ -1,7 +1,10 @@
 package com.lsc
 
+import NetGraphAlgebraDefs.NetModelAlgebra.outputDirectory
+import NetGraphAlgebraDefs.{NetGraph, NetModelAlgebra}
 import Randomizer.SupplierOfRandomness
 import Utilz.CreateLogger
+import com.google.common.graph.ValueGraph
 
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.*
@@ -10,6 +13,7 @@ import com.typesafe.config.ConfigFactory
 import org.slf4j.Logger
 
 import java.net.{InetAddress, NetworkInterface, Socket}
+import scala.util.{Failure, Success}
 
 object Launcher:
   val logger:Logger = CreateLogger(classOf[Launcher.type])
@@ -36,8 +40,20 @@ object Launcher:
     config.getConfig("NGSimulator").entrySet().forEach(e => logger.info(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
     logger.info("for the NetModel entry")
     config.getConfig("NGSimulator").getConfig("NetModel").entrySet().forEach(e => logger.info(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
-    val currentDirectory = new java.io.File(".").getCanonicalPath + "/"
-    logger.info(s"currentDirectory: $currentDirectory")
+    val graph: NetGraph = NetModelAlgebra()
+    graph.persist(outputDirectory, "NetGraph.txt")
+/*
+    val in = NetGraph.load(outputDirectory, "NetGraph.txt") match
+      case None => logger.info("Failed to load the graph")
+      case Some(no) => logger.info("Successfully loaded the graph")
+        no.head match
+          case Failure(exception) => logger.info(exception.getMessage)
+          case Success(value) =>
+            logger.info(value.toString)
+            logger.info(s"${graph.initState == value}")
 
-
-
+        no.tail.head match
+          case Failure(exception) => logger.info(exception.getMessage)
+          case Success(value) =>
+            logger.info(value.toString)
+            logger.info(s"${graph.initState == value}")*/

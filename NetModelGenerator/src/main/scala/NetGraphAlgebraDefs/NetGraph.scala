@@ -4,15 +4,23 @@ import Randomizer.SupplierOfRandomness
 import Utilz.CreateLogger
 import com.google.common.graph.{Graphs, MutableValueGraph, ValueGraphBuilder}
 import org.slf4j.Logger
+import sun.nio.cs.UTF_8
 
+import java.io.{BufferedReader, ByteArrayInputStream, FileInputStream, FileReader, ObjectInputStream}
+import java.nio.charset.StandardCharsets
+import java.nio.file.{Files, StandardOpenOption}
+import java.util.Base64
 import scala.annotation.tailrec
 import scala.collection.immutable.TreeSeqMap.OrderBy
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
+import scala.util.{Failure, Success, Try, Using}
 
 case class NetGraph(sm: NetStateMachine, initState: NodeObject):
-  val logger: Logger = CreateLogger(classOf[NetGraph])
+  import NetGraph.logger
+
   def copy: NetGraph = NetGraph(Graphs.copyOf(sm), initState)
+
   def degrees: List[(Int, Int)] = sm.nodes().asScala.toList.map(node => (sm.inDegree(node), sm.outDegree(node)))
 
   def totalNodes: Int = sm.nodes().asScala.count(_ => true)
@@ -27,6 +35,7 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject):
       )
     )
     matrix
+  end adjacencyMatrix
 
   extension (m: Array[Array[Float]])
     def toCsv: String =
@@ -35,6 +44,43 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject):
         sb.append("\n")
         row.foreach(cell => if cell != Float.PositiveInfinity then sb.append(f"$cell%.3f").append(",") else sb.append("-").append(",")))
       sb.toString
+    end toCsv
+  end extension
+
+  def persist(dir: String, fileName: String): Unit =
+    import java.io._
+    import java.util.Base64
+    import java.nio.charset.StandardCharsets.UTF_8
+    import java.io.{FileOutputStream, ObjectOutputStream}
+
+    val encodedGraph: Unit = Try(new ByteArrayOutputStream()).map(baos => (baos, new ObjectOutputStream(baos))).map { case (baos, oos) =>
+      val lst = sm.nodes().asScala.toList.map(node =>
+        baos.reset()
+        oos.writeObject(node)
+        oos.flush()
+        s"Node ${node.id}:".concat(new String(Base64.getEncoder.encode(baos.toByteArray), UTF_8))
+      ) ::: sm.edges().asScala.toList.map(edge =>
+            val action = sm.edgeValue(edge.source(), edge.target()).get
+            baos.reset()
+            oos.writeObject(action)
+            oos.flush()
+            s"Edge ${edge.source().id} -> ${edge.target().id}:".concat(new String(Base64.getEncoder.encode(baos.toByteArray), UTF_8)))
+      baos.close()
+      oos.close()
+      lst
+    }.map(lstOfSerializedString =>
+      import java.nio.file.{Files, Paths, StandardOpenOption}
+      import java.nio.charset.StandardCharsets
+      import scala.jdk.CollectionConverters.*
+      Try(Files.write(
+        Paths.get(s"$dir$fileName"),
+        lstOfSerializedString.toSeq.asJava,
+        StandardCharsets.UTF_8,
+        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
+      ))) match
+            case Success(f) => logger.info(s"Successfully persisted the graph to ${f.get}")
+            case Failure(exception) => logger.error(s"Failed to persist the graph to $dir$fileName", exception)
+  end persist
 
   def maxOutDegree(): Int = sm.nodes().asScala.map(node => sm.outDegree(node)).max
 
@@ -47,7 +93,8 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject):
       Some((randomSuccessor, edge))
 
   def unreachableNodes(): (Set[NodeObject], Int) =
-    var loopsInGraph:Int = 0
+    var loopsInGraph: Int = 0
+
     @tailrec
     def dfs(nodes: List[NodeObject], visited: Set[NodeObject]): Set[NodeObject] =
       nodes match
@@ -57,7 +104,8 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject):
             loopsInGraph += 1
             Set.empty[NodeObject]
           else
-            dfs(tl ::: sm.successors(hd).asScala.toList, visited + hd)// ++ dfs(tl, visited + hd)
+            dfs(tl ::: sm.successors(hd).asScala.toList, visited + hd) // ++ dfs(tl, visited + hd)
+
     end dfs
 
     val (reachableNodes: Set[NodeObject], loops: Int) = {
@@ -65,8 +113,10 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject):
       (rns, loopsInGraph)
     }
     val allNodes: Set[NodeObject] = sm.nodes().asScala.toSet
-    logger.info(f"The reachability ration is ${reachableNodes.size.toFloat*100/allNodes.size.toFloat}%4.2f or there are ${reachableNodes.size} reachable nodes out of total ${allNodes.size} nodes in the graph")
+    logger.info(f"The reachability ration is ${reachableNodes.size.toFloat * 100 / allNodes.size.toFloat}%4.2f or there are ${reachableNodes.size} reachable nodes out of total ${allNodes.size} nodes in the graph")
     (allNodes -- reachableNodes -- Set(initState), loops)
+  end unreachableNodes
+
 
   def distances(): Map[NodeObject, Double] =
     val distanceMap: scala.collection.mutable.Map[NodeObject, Double] = collection.mutable.Map() ++ sm.nodes().asScala.map(node => node -> Double.PositiveInfinity).toMap
@@ -100,3 +150,28 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject):
 
     explore(initState)
     distanceMap.toMap
+  end distances
+
+object NetGraph:
+  val logger: Logger = CreateLogger(classOf[NetGraph])
+
+  def load(dir: String, fileName: String): Option[List[Try[NodeObject]]] =
+    Using(new BufferedReader(new FileReader(s"$dir$fileName"))) { reader =>
+      Iterator.continually(reader.readLine()).takeWhile(_ != null).toSeq
+    } match
+      case Failure(exception) =>
+        logger.error(s"Failed to load the NetGraph from $dir$fileName", exception)
+        None
+      case Success(lines) => Some(lines.map(line => {
+          Try(Base64.getDecoder.decode(line.getBytes(StandardCharsets.UTF_8))).
+            map(bytes => new ObjectInputStream(new ByteArrayInputStream(bytes))).
+            map(ois => {
+              val value = ois.readObject.asInstanceOf[NodeObject]
+              ois.close()
+              value
+            })
+        }).toList)
+  end load
+
+end NetGraph
+

@@ -8,6 +8,7 @@ val sfl4sVersion = "2.0.0-alpha5"
 val graphVizVersion = "0.18.1"
 val netBuddyVersion = "1.14.4"
 val catsVersion = "2.9.0"
+val apacheCommonsVersion = "2.13.0"
 
 lazy val commonDependencies = Seq(
   "org.scalatest" %% "scalatest" % scalaTestVersion % Test,
@@ -21,7 +22,8 @@ lazy val root = (project in file("."))
   .settings(
     scalaVersion := "3.2.2",
     name := "NetGameSim",
-    idePackagePrefix := Some("com.lsc")
+    idePackagePrefix := Some("com.lsc"),
+    libraryDependencies ++= commonDependencies
   ).aggregate(NetModelGenerator,GenericSimUtilities).dependsOn(NetModelGenerator)
 
 lazy val NetModelGenerator = (project in file("NetModelGenerator"))
@@ -31,7 +33,8 @@ lazy val NetModelGenerator = (project in file("NetModelGenerator"))
     libraryDependencies ++= commonDependencies ++ Seq(
       "com.google.guava" % "guava" % guavaVersion,
       "guru.nidi" % "graphviz-java" % graphVizVersion,
-      "org.typelevel" %% "cats-core" % catsVersion
+      "org.typelevel" %% "cats-core" % catsVersion,
+      "commons-io" % "commons-io" % apacheCommonsVersion
     )
   ).dependsOn(GenericSimUtilities)
 
