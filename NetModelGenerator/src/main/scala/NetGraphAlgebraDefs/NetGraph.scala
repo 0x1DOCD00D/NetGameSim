@@ -1,12 +1,14 @@
 package NetGraphAlgebraDefs
 
+import NetGraphAlgebraDefs.NetModelAlgebra.outputDirectory
 import Randomizer.SupplierOfRandomness
-import Utilz.CreateLogger
+import Utilz.{CreateLogger, NGSConstants}
 import com.google.common.graph.{Graphs, MutableValueGraph, ValueGraphBuilder}
+import org.apache.commons.io.FileUtils
 import org.slf4j.Logger
 import sun.nio.cs.UTF_8
 
-import java.io.{BufferedReader, ByteArrayInputStream, FileInputStream, FileReader, ObjectInputStream}
+import java.io.{BufferedReader, BufferedWriter, ByteArrayInputStream, File, FileInputStream, FileReader, FileWriter, ObjectInputStream}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, StandardOpenOption}
 import java.util.Base64
@@ -47,41 +49,20 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject):
     end toCsv
   end extension
 
-  def persist(dir: String, fileName: String): Unit =
+  def persist(dir: String = outputDirectory, fileName: String = NGSConstants.OUTPUTFILENAME): Unit =
     import java.io._
     import java.util.Base64
     import java.nio.charset.StandardCharsets.UTF_8
-    import java.io.{FileOutputStream, ObjectOutputStream}
 
-    val encodedGraph: Unit = Try(new ByteArrayOutputStream()).map(baos => (baos, new ObjectOutputStream(baos))).map { case (baos, oos) =>
-      val lst = sm.nodes().asScala.toList.map(node =>
-        baos.reset()
-        oos.writeObject(node)
+    val fullGraphAsList: List[NetGraphComponent] = sm.nodes().asScala.toList ::: sm.edges().asScala.toList.map {edge =>
+      sm.edgeValue(edge.source(), edge.target()).get}
+    Try(new FileOutputStream(s"$dir$fileName", false)).map(fos => new ObjectOutputStream(fos)).map { oos =>
+        oos.writeObject(fullGraphAsList)
         oos.flush()
-        s"Node ${node.id}:".concat(new String(Base64.getEncoder.encode(baos.toByteArray), UTF_8))
-      ) ::: sm.edges().asScala.toList.map(edge =>
-            val action = sm.edgeValue(edge.source(), edge.target()).get
-            baos.reset()
-            oos.writeObject(action)
-            oos.flush()
-            s"Edge ${edge.source().id} -> ${edge.target().id}:".concat(new String(Base64.getEncoder.encode(baos.toByteArray), UTF_8)))
-      baos.close()
-      oos.close()
-      lst
-    }.map(lstOfSerializedString =>
-      import java.nio.file.{Files, Paths, StandardOpenOption}
-      import java.nio.charset.StandardCharsets
-      import scala.jdk.CollectionConverters.*
-      Try(Files.write(
-        Paths.get(s"$dir$fileName"),
-        lstOfSerializedString.toSeq.asJava,
-        StandardCharsets.UTF_8,
-        StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING
-      ))) match
-            case Success(f) => logger.info(s"Successfully persisted the graph to ${f.get}")
-            case Failure(exception) => logger.error(s"Failed to persist the graph to $dir$fileName", exception)
+        oos.close()
+    }.map(_ => logger.info(s"Successfully persisted the graph to $dir$fileName"))
+      .recover { case e => logger.error(s"Failed to persist the graph to $dir$fileName : ", e) }
   end persist
-
   def maxOutDegree(): Int = sm.nodes().asScala.map(node => sm.outDegree(node)).max
 
   def getRandomConnectedNode(from: NodeObject): Option[(NodeObject, Action)] =
@@ -155,23 +136,20 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject):
 object NetGraph:
   val logger: Logger = CreateLogger(classOf[NetGraph])
 
-  def load(dir: String, fileName: String): Option[List[Try[NodeObject]]] =
-    Using(new BufferedReader(new FileReader(s"$dir$fileName"))) { reader =>
-      Iterator.continually(reader.readLine()).takeWhile(_ != null).toSeq
-    } match
-      case Failure(exception) =>
-        logger.error(s"Failed to load the NetGraph from $dir$fileName", exception)
-        None
-      case Success(lines) => Some(lines.map(line => {
-          Try(Base64.getDecoder.decode(line.getBytes(StandardCharsets.UTF_8))).
-            map(bytes => new ObjectInputStream(new ByteArrayInputStream(bytes))).
-            map(ois => {
-              val value = ois.readObject.asInstanceOf[NodeObject]
-              ois.close()
-              value
-            })
-        }).toList)
-  end load
+  def load(fileName: String, dir: String = outputDirectory): Option[NetGraph] =
+    logger.info(s"Loading the NetGraph from $dir$fileName")
 
+    Try(new FileInputStream(s"$dir$fileName")).flatMap { fis =>
+      val ois = new ObjectInputStream(fis)
+      val ng = ois.readObject.asInstanceOf[List[NetGraphComponent]]
+      ois.close()
+      Try(ng)
+    }.toOption.flatMap {
+      lstOfNetComponents =>
+        val nodes = lstOfNetComponents.collect { case node: NodeObject => node }
+        val edges = lstOfNetComponents.collect { case edge: Action => edge }
+        NetModelAlgebra(nodes, edges)
+    }
+  end load
 end NetGraph
 

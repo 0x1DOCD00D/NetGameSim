@@ -3,6 +3,8 @@ package Utilz
 import Utilz.NGSConstants.MAXWALKPATHLENGTHCOEFFDEFAULT
 import com.typesafe.config.{Config, ConfigFactory}
 
+import java.text.SimpleDateFormat
+import java.util.Date
 import scala.util.Failure
 
 object NGSConstants:
@@ -53,6 +55,10 @@ object NGSConstants:
   val GRAPHWALKNODETERMINATIONPROBABILITY = "graphWalkNodeTerminationProbability"
   val GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT = 0.05d
   val OUTPUTDIRECTORY = "outputDirectory"
+  def OUTPUTFILENAME: String =
+    val currentDate = new Date(System.currentTimeMillis())
+    val df = new SimpleDateFormat("dd-MM-yy-HH-mm-ss")
+    "NetGraph_" + df.format(currentDate) + ".txt"
 
   val MALAPPBUDGET = "malAppBudget"
   val MALAPPBUDGETDEFAULT = 100.0d

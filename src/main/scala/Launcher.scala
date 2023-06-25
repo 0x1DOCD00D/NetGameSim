@@ -41,19 +41,7 @@ object Launcher:
     logger.info("for the NetModel entry")
     config.getConfig("NGSimulator").getConfig("NetModel").entrySet().forEach(e => logger.info(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
     val graph: NetGraph = NetModelAlgebra()
-    graph.persist(outputDirectory, "NetGraph.txt")
-/*
-    val in = NetGraph.load(outputDirectory, "NetGraph.txt") match
-      case None => logger.info("Failed to load the graph")
-      case Some(no) => logger.info("Successfully loaded the graph")
-        no.head match
-          case Failure(exception) => logger.info(exception.getMessage)
-          case Success(value) =>
-            logger.info(value.toString)
-            logger.info(s"${graph.initState == value}")
-
-        no.tail.head match
-          case Failure(exception) => logger.info(exception.getMessage)
-          case Success(value) =>
-            logger.info(value.toString)
-            logger.info(s"${graph.initState == value}")*/
+    graph.persist(fileName = "NetGraph.ser")
+    NetGraph.load(  fileName = "NetGraph.ser") match
+      case Some(graph1) => if graph1 == graph then logger.info("Graphs are equal") else logger.info("Graphs are not equal")
+      case None => logger.error("Failed to load the graph")

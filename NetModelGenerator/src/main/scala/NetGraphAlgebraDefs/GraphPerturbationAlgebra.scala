@@ -92,7 +92,7 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
     val newNode: NodeObject = NodeObject(newModel.sm.nodes().asScala.map(_.id).max + 1, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
       SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
       maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
-      maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties))
+      maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties), SupplierOfRandomness.randProbs(1).head)
     val newEdge: Action = NetModelAlgebra.createAction(node, newNode)
     if newModel.sm.addNode(newNode) then
       Try(newModel.sm.putEdgeValue(node, newNode, newEdge)) match

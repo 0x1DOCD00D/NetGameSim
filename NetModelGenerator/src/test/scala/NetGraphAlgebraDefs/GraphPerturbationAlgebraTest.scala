@@ -28,11 +28,11 @@ object GraphPerturbationAlgebraTest:
 class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with MockitoSugar with PrivateMethodTester {
   val logger: Logger = CreateLogger(this.getClass)
 
-  val node1: NodeObject = NodeObject(id = 1, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
-  val node2: NodeObject = NodeObject(id = 2, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
-  val node3: NodeObject = NodeObject(id = 3, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
-  val edge12: Action = Action(actionType = 1, fromId = 1, toId = 2, resultingValue = Some(12), cost = 0.12)
-  val edge23: Action = Action(actionType = 2, fromId = 2, toId = 3, resultingValue = Some(23), cost = 0.23)
+  val node1: NodeObject = NodeObject(id = 1, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10,1)
+  val node2: NodeObject = NodeObject(id = 2, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10,1)
+  val node3: NodeObject = NodeObject(id = 3, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10,1)
+  val edge12: Action = Action(actionType = 1, node1.id, node2.id, fromId = 1, toId = 2, resultingValue = Some(12), cost = 0.12)
+  val edge23: Action = Action(actionType = 2, node2.id, node3.id, fromId = 2, toId = 3, resultingValue = Some(23), cost = 0.23)
   def createTestGraph(): NetGraph = {
     val graph1: MutableValueGraph[NodeObject, Action] = ValueGraphBuilder.directed().build()
 
@@ -71,7 +71,7 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     logger.info(modificationRecord.toString)
     logger.info(graph.sm.toString)
     graph.sm.nodes().size shouldBe 2
-    modificationRecord shouldBe Vector((OriginalNetComponent(NodeObject(1,5,10,1,20,5,5,10)),NodeRemoved(NodeObject(1,5,10,1,20,5,5,10))), (OriginalNetComponent(NodeObject(1,5,10,1,20,5,5,10)),EdgeRemoved(Action(1,1,2,Some(12),0.12))))
+    modificationRecord shouldBe Vector((OriginalNetComponent(NodeObject(1,5,10,1,20,5,5,10,1.0)),NodeRemoved(NodeObject(1,5,10,1,20,5,5,10,1.0))), (OriginalNetComponent(NodeObject(1,5,10,1,20,5,5,10,1.0)),EdgeRemoved(Action(1,1,2,1,2,Some(12),0.12))))
     val invMR = inverseMR(modificationRecord)
     logger.info(s"Inverse MR: ${invMR.toString}")
   }
@@ -102,7 +102,7 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     logger.info(graph.sm.toString)
     graph.sm.edges().size shouldBe 3
     graph.sm.hasEdgeConnecting(node3, node1) shouldBe true
-    modificationRecord(0)._1.node shouldBe NodeObject(3,5,10,1,20,5,5,10)
+    modificationRecord(0)._1.node shouldBe NodeObject(3,5,10,1,20,5,5,10,1)
 
     val invMR = inverseMR(modificationRecord)
     logger.info(s"Inverse MR: ${invMR.toString}")
@@ -120,7 +120,7 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     logger.info(graph.sm.toString)
     graph.sm.edges().size shouldBe 1
     graph.sm.hasEdgeConnecting(node2, node3) shouldBe false
-    modificationRecord(0)._1.node shouldBe NodeObject(2, 5, 10, 1, 20, 5, 5, 10)
+    modificationRecord(0)._1.node shouldBe NodeObject(2, 5, 10, 1, 20, 5, 5, 10,1)
 
     val invMR = inverseMR(modificationRecord)
     logger.info(s"Inverse MR: ${invMR.toString}")
@@ -139,7 +139,7 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     graph.sm.edges().size shouldBe 2
     graph.sm.hasEdgeConnecting(node2, node3) shouldBe true
     val newEdge = graph.sm.edgeValue(node2, node3).get
-    modificationRecord(0)._1.node shouldBe NodeObject(2, 5, 10, 1, 20, 5, 5, 10)
+    modificationRecord(0)._1.node shouldBe NodeObject(2, 5, 10, 1, 20, 5, 5, 10,1)
     oldEdge should not be newEdge
 
     val invMR = inverseMR(modificationRecord)

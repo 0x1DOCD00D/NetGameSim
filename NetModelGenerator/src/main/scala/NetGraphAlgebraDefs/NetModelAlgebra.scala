@@ -31,10 +31,39 @@ class NetModel extends NetGraphConnectednessFinalizer:
       if !stateMachine.addNode(NodeObject(id, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
         SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
         maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
-        maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties)
+        maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties), SupplierOfRandomness.randProbs(1).head
         )) then logger.error(s"Could not add node with id $id")
       ()
     )
+
+  def generateModel(nodes: List[NodeObject], edges: List[Action]): Option[NetGraph] =
+    val sanityCheck = edges.foldLeft(true) {
+      (acc, edge) =>
+        val nodeFrom = nodes.find(_.id == edge.fromNode)
+        val nodeTo = nodes.find(_.id == edge.toNode)
+        if nodeFrom.isEmpty then logger.error(s"Could not find node with id ${edge.fromNode}")
+        if nodeTo.isEmpty then logger.error(s"Could not find node with id ${edge.toNode}")
+        if nodeFrom.isEmpty || nodeTo.isEmpty then false
+        else acc
+    } && nodes.exists(_.id == 0) && edges.foldLeft(true) {
+      (acc, edge) => acc && nodes.exists(_.id == edge.fromNode) && nodes.exists(_.id == edge.fromNode)
+    }
+
+    if sanityCheck then
+      nodes.foreach { node =>
+        if !stateMachine.addNode(node) then logger.error(s"Could not add node with id ${node.id}")
+        ()
+      }
+      edges.foreach { edge =>
+        val nodeFrom: NodeObject = nodes.find(_.id == edge.fromNode).get
+        val nodeTo: NodeObject = nodes.find(_.id == edge.toNode).get
+        Try(stateMachine.putEdgeValue(nodeFrom, nodeTo, edge)) match
+          case Failure(exception) => logger.error(s"Could not add edge from ${edge.fromId} to ${edge.toId} for reason ${exception.getMessage}")
+          case Success(_) => ()
+      }
+      Some(NetGraph(stateMachine, nodes.find(_.id == 0).get))
+    else None
+  end generateModel
 
   def generateModel(forceLinkOrphans: Boolean = false): NetGraph =
     createNodes()
@@ -70,11 +99,10 @@ class NetModel extends NetGraphConnectednessFinalizer:
     val newInitNode: NodeObject = NodeObject(0, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
       SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
       maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
-      maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties)
+      maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties), SupplierOfRandomness.randProbs(1).head
     )
     stateMachine.addNode(newInitNode)
     val orphans: Array[NodeObject] = allNodes.filter(node =>
-//      NetModelAlgebra.logger.info(s"${stateMachine.inDegree(node)}")
       stateMachine.incidentEdges(node).isEmpty)
     orphans.foreach(node =>
       stateMachine.putEdgeValue(newInitNode, node, createAction(newInitNode, node)))
@@ -106,6 +134,7 @@ object NetModelAlgebra:
   val graphWalkNodeTerminationProbability: Double = getConfigEntry(NGSConstants.configNetGameModel,GRAPHWALKNODETERMINATIONPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT)
   val outputDirectory: String = {
     val defDir = new java.io.File(".").getCanonicalPath
+    logger.info(s"Default output directory: $defDir")
     val dir: String = getConfigEntry(NGSConstants.globalConfig, NGSConstants.OUTPUTDIRECTORY, defDir)
     val ref = new File(dir)
     if ref.exists() && ref.isDirectory then
@@ -131,6 +160,7 @@ object NetModelAlgebra:
   def getFields: Map[String, Double] = this.getClass.getDeclaredFields.filter(field => field.getType == classOf[Double]).map(field => field.getName -> field.get(this).asInstanceOf[Double]).toMap[String, Double] ++  this.getClass.getDeclaredFields.filter(field => field.getType == classOf[Int]).map(field => field.getName -> field.get(this).toString.toDouble).toMap[String, Double]
 
   def apply(forceLinkOrphans: Boolean = true): NetGraph = new NetModel().generateModel(forceLinkOrphans)
+  def apply(nodes: List[NodeObject], edges: List[Action]): Option[NetGraph] = new NetModel().generateModel(nodes, edges)
 
   def createAction(from: NodeObject, to: NodeObject): Action =
     val fCount = from.childrenCount
@@ -139,6 +169,8 @@ object NetModelAlgebra:
     require(cost >= 0 && cost <= 1)
 
     Action(SupplierOfRandomness.onDemand(maxv = actionRange),
+      from.id,
+      to.id,
       if fCount > 0 then SupplierOfRandomness.onDemand(maxv = fCount) else 0,
       if tCount > 0 then SupplierOfRandomness.onDemand(maxv = tCount) else 0,
       if SupplierOfRandomness.onDemand() % 2 == 0 then None else Some(SupplierOfRandomness.onDemand(maxv = propValueRange)),

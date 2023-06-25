@@ -111,11 +111,11 @@ object RandomWalker:
   @main def runRandomWalker(args: String*): Unit =
     logger.info("File NetModelGenerator/src/main/scala/NetModelAnalyzer/RandomWalker.scala created at time 12:46 PM")
 
-    val node1: NodeObject = NodeObject(id = 1, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
-    val node2: NodeObject = NodeObject(id = 2, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
-    val node3: NodeObject = NodeObject(id = 3, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10)
-    val edge12: Action = Action(actionType = 1, fromId = 1, toId = 2, resultingValue = Some(12), cost = 0.12)
-    val edge23: Action = Action(actionType = 2, fromId = 2, toId = 3, resultingValue = Some(23), cost = 0.23)
+    val node1: NodeObject = NodeObject(id = 1, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10,1)
+    val node2: NodeObject = NodeObject(id = 2, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10,1)
+    val node3: NodeObject = NodeObject(id = 3, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10,1)
+    val edge12: Action = Action(actionType = 1, node1.id, node2.id, fromId = 1, toId = 2, resultingValue = Some(12), cost = 0.12)
+    val edge23: Action = Action(actionType = 2, node2.id, node3.id, fromId = 2, toId = 3, resultingValue = Some(23), cost = 0.23)
     val lst = List((node1, edge12), (node2, edge23), (node3, TerminalAction), (TerminalNode, TerminalAction), (node2, edge23), (node1, edge23))
     logger.info(s"List of entries with cycles: ${lst.mkString(", ")}")
     val cycles = lst.groupBy(x => x._1).filter(x => x._2.size > 1).keys.toList
