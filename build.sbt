@@ -53,6 +53,7 @@ scalacOptions ++= Seq(
     )
 
 compileOrder := CompileOrder.JavaThenScala
+test / fork := true
 run / fork := true
 run / javaOptions ++= Seq(
   "-Xms1512M",
