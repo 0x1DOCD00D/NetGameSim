@@ -49,7 +49,7 @@ trait GraphStore:
         }
         val linkedGraph = edges.foldLeft(nodesMap) { case (acc, edge) =>
           if acc.contains(edge.fromNode) && acc.contains(edge.toNode) then
-            acc + (edge.fromNode -> acc(edge.fromNode).link(to(acc(edge.toNode)).`with`(weight((edge.cost*10).floor))))
+            acc + (edge.fromNode -> acc(edge.fromNode).link(to(acc(edge.toNode)).`with`(weight(if (edge.cost*10).floor < 1 then 1 else (edge.cost*10).floor))))
           else
             logger.error(s"Edge $edge is not valid because it contains a node that is not in the graph")
             acc
