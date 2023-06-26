@@ -17,7 +17,7 @@ class NetGraphTest extends AnyFlatSpec with Matchers {
   behavior of "Net graph generation and (de)serialization"
 
   it should "create a small net graph and then serialize it" in {
-    val graph: NetGraph = NetModelAlgebra()
+    val graph: NetGraph with GraphStore = NetModelAlgebra()
     graph.persist(outputDirectory, "testGraph.ser")
     val res = FileUtils.getFile(outputDirectory+"testGraph.ser").exists()
     FileUtils.forceDelete(FileUtils.getFile(outputDirectory+"testGraph.ser"))

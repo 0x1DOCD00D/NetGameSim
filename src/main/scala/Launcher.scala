@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContext, Future}
 import com.typesafe.config.ConfigFactory
+import guru.nidi.graphviz.engine.Format
 import org.slf4j.Logger
 
 import java.net.{InetAddress, NetworkInterface, Socket}
@@ -45,3 +46,4 @@ object Launcher:
     NetGraph.load(  fileName = "NetGraph.ser") match
       case Some(graph1) => if graph1 == graph then logger.info("Graphs are equal") else logger.info("Graphs are not equal")
       case None => logger.error("Failed to load the graph")
+    graph.toDotVizFormat(name = s"Net Graph with ${graph.totalNodes} nodes", dir = outputDirectory, fileName = "GraphViz", outputImageFormat = Format.PNG)

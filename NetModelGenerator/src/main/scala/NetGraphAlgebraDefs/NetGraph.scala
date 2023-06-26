@@ -18,7 +18,7 @@ import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Success, Try, Using}
 
-case class NetGraph(sm: NetStateMachine, initState: NodeObject):
+case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphStore:
   import NetGraph.logger
 
   def copy: NetGraph = NetGraph(Graphs.copyOf(sm), initState)
@@ -49,20 +49,6 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject):
     end toCsv
   end extension
 
-  def persist(dir: String = outputDirectory, fileName: String = NGSConstants.OUTPUTFILENAME): Unit =
-    import java.io._
-    import java.util.Base64
-    import java.nio.charset.StandardCharsets.UTF_8
-
-    val fullGraphAsList: List[NetGraphComponent] = sm.nodes().asScala.toList ::: sm.edges().asScala.toList.map {edge =>
-      sm.edgeValue(edge.source(), edge.target()).get}
-    Try(new FileOutputStream(s"$dir$fileName", false)).map(fos => new ObjectOutputStream(fos)).map { oos =>
-        oos.writeObject(fullGraphAsList)
-        oos.flush()
-        oos.close()
-    }.map(_ => logger.info(s"Successfully persisted the graph to $dir$fileName"))
-      .recover { case e => logger.error(s"Failed to persist the graph to $dir$fileName : ", e) }
-  end persist
   def maxOutDegree(): Int = sm.nodes().asScala.map(node => sm.outDegree(node)).max
 
   def getRandomConnectedNode(from: NodeObject): Option[(NodeObject, Action)] =
@@ -139,11 +125,11 @@ object NetGraph:
   def load(fileName: String, dir: String = outputDirectory): Option[NetGraph] =
     logger.info(s"Loading the NetGraph from $dir$fileName")
 
-    Try(new FileInputStream(s"$dir$fileName")).flatMap { fis =>
-      val ois = new ObjectInputStream(fis)
+    Try(new FileInputStream(s"$dir$fileName")).map ( fis => (fis, new ObjectInputStream(fis)) ).map { (fis,ois) =>
       val ng = ois.readObject.asInstanceOf[List[NetGraphComponent]]
       ois.close()
-      Try(ng)
+      fis.close()
+      ng
     }.toOption.flatMap {
       lstOfNetComponents =>
         val nodes = lstOfNetComponents.collect { case node: NodeObject => node }
