@@ -104,11 +104,35 @@ class NetModel extends NetGraphConnectednessFinalizer:
     stateMachine.addNode(newInitNode)
     val orphans: Array[NodeObject] = allNodes.filter(node =>
       stateMachine.incidentEdges(node).isEmpty)
-    orphans.foreach(node =>
-      stateMachine.putEdgeValue(newInitNode, node, createAction(newInitNode, node)))
+    val pvIter: Iterator[Boolean] = SupplierOfRandomness.randProbs(orphans.length).map(_ < edgeProbability).iterator
+    orphans.foreach {
+      node =>
+        if node != newInitNode && pvIter.nonEmpty && pvIter.next() then
+          stateMachine.putEdgeValue(newInitNode, node, createAction(newInitNode, node))
+        else ()
+    }
+    val orphansIter: Iterator[Boolean] = SupplierOfRandomness.randProbs(orphans.length*orphans.length).map(_ < edgeProbability).iterator
+    orphans.foreach {
+      node =>
+          orphans.foreach(orph =>
+            if node != orph && orphansIter.nonEmpty && orphansIter.next() then
+              if stateMachine.edgeValue(node, orph).isEmpty then
+                stateMachine.putEdgeValue(node, orph, createAction(node, orph))
+              else if stateMachine.edgeValue(orph, node).isEmpty then
+                stateMachine.putEdgeValue(orph, node, createAction(orph, node))
+              else ()
+            else ()
+          )
+    }
+
     val connected: Array[NodeObject] = allNodes.filter(node => stateMachine.outDegree(node) > (if maxOutdegree >= connectedness then connectedness else maxOutdegree - 1))
     connected.foreach(node =>
-      stateMachine.putEdgeValue(newInitNode, node, createAction(newInitNode, node)))
+      orphans.foreach(orph =>
+        if node != orph && SupplierOfRandomness.randProbs(1).head < edgeProbability then
+          stateMachine.putEdgeValue(node, orph, createAction(node, orph))
+        else ()
+      )
+    )
     newInitNode
 
 object NetModelAlgebra:

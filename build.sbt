@@ -9,6 +9,7 @@ val graphVizVersion = "0.18.1"
 val netBuddyVersion = "1.14.4"
 val catsVersion = "2.9.0"
 val apacheCommonsVersion = "2.13.0"
+val jGraphTlibVersion = "1.5.2"
 
 lazy val commonDependencies = Seq(
   "org.scalatest" %% "scalatest" % scalaTestVersion % Test,
@@ -34,7 +35,8 @@ lazy val NetModelGenerator = (project in file("NetModelGenerator"))
       "com.google.guava" % "guava" % guavaVersion,
       "guru.nidi" % "graphviz-java" % graphVizVersion,
       "org.typelevel" %% "cats-core" % catsVersion,
-      "commons-io" % "commons-io" % apacheCommonsVersion
+      "commons-io" % "commons-io" % apacheCommonsVersion,
+      "org.jgrapht" % "jgrapht-core" % jGraphTlibVersion
     )
   ).dependsOn(GenericSimUtilities)
 
