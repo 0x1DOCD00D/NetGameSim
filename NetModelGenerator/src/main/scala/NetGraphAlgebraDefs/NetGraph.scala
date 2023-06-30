@@ -1,6 +1,6 @@
 package NetGraphAlgebraDefs
 
-import NetGraphAlgebraDefs.NetModelAlgebra.{createAction, edgeProbability, outputDirectory}
+import NetGraphAlgebraDefs.NetModelAlgebra.{createAction, desiredReachabilityCoverage, edgeProbability, outputDirectory}
 import Randomizer.SupplierOfRandomness
 import Utilz.{CreateLogger, NGSConstants}
 import com.google.common.graph.{Graphs, MutableValueGraph, ValueGraphBuilder}
@@ -28,7 +28,7 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
   def totalNodes: Int = sm.nodes().asScala.count(_ => true)
 
   def forceReachability: Set[NodeObject] =
-    val orphanNodes: Set[NodeObject] = unreachableNodes()._1
+    val orphanNodes: List[NodeObject] = unreachableNodes()._1.toList
     logger.info(s"Force reachability: there are ${orphanNodes.size} orphan nodes in the graph")
     if orphanNodes.size <= 0 then Set.empty
     else
@@ -41,19 +41,21 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
         val rn: NodeObject = reachableNodes.head
         val unr: NodeObject = orphanNodes.toList.minBy(node => sm.inDegree(node))
         sm.putEdgeValue(rn, unr, createAction(rn, unr))
-        val pvIter: Iterator[Boolean] = SupplierOfRandomness.randProbs(orphanNodes.size*orphanNodes.size).map(_ < edgeProbability).iterator
-        orphanNodes.foreach {
-          node =>
-            orphanNodes.foreach {
-              orph =>
-                if node != orph && pvIter.nonEmpty && pvIter.next() then
-                  if sm.edgeValue(node, orph).isEmpty then
-                    sm.putEdgeValue(node, orph, createAction(node, orph))
-                  else if sm.edgeValue(orph, node).isEmpty then
-                    sm.putEdgeValue(orph, node, createAction(orph, node))
-                  else ()
-                else ()
-            }
+
+        val nodesLength = orphanNodes.size
+        val totalCombinationsOfNodes = nodesLength * nodesLength
+        SupplierOfRandomness.randProbs(totalCombinationsOfNodes).map(_ < edgeProbability).zipWithIndex.filter(_._1).map(v => (v._2 / nodesLength, v._2 % nodesLength)).foreach {
+          case (from, to) =>
+            val nodeFrom = orphanNodes(from)
+            val nodeTo = orphanNodes(to)
+            if nodeTo != nodeFrom then
+              if sm.edgeValue(nodeFrom, nodeTo).isEmpty then
+                logger.info(s"Adding an edge from orphan ${nodeFrom.id} to orphan ${nodeTo.id}")
+                sm.putEdgeValue(nodeFrom, nodeTo, createAction(nodeFrom, nodeTo))
+              else if sm.edgeValue(nodeTo, nodeFrom).isEmpty then
+                logger.info(s"Adding an edge from orphan ${nodeTo.id} to orphan ${nodeFrom.id}")
+                sm.putEdgeValue(nodeTo, nodeFrom, createAction(nodeTo, nodeFrom))
+              else ()
         }
         forceReachability
 
@@ -95,14 +97,16 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
 
     @tailrec
     def dfs(nodes: List[NodeObject], visited: Set[NodeObject]): Set[NodeObject] =
-      nodes match
-        case Nil => visited
-        case hd :: tl =>
-          if visited.contains(hd) then
-            loopsInGraph += 1
-            dfs(tl, visited)
-          else
-            dfs(sm.successors(hd).asScala.toList.filterNot(n=>visited.contains(n)) ::: tl, visited + hd) // ++ dfs(tl, visited + hd)
+      if  visited.size.toFloat/(sm.nodes().size-1).toFloat >= desiredReachabilityCoverage then visited
+      else
+        nodes match
+          case Nil => visited
+          case hd :: tl =>
+            if visited.contains(hd) then
+              loopsInGraph += 1
+              dfs(tl, visited)
+            else
+              dfs(sm.successors(hd).asScala.toList.filterNot(n=>visited.contains(n)) ::: tl, visited + hd) // ++ dfs(tl, visited + hd)
     end dfs
 
     val (reachableNodes: Set[NodeObject], loops: Int) = {
@@ -111,7 +115,7 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
       (rns, loopsInGraph)
     }
     val allNodes: Set[NodeObject] = sm.nodes().asScala.toSet
-    logger.info(f"The reachability ratio is ${reachableNodes.size.toFloat * 100 / allNodes.size.toFloat}%4.2f or there are ${reachableNodes.size} reachable nodes out of total ${allNodes.size} nodes in the graph")
+    logger.info(f"The reachability ratio is ${reachableNodes.size.toFloat * 100 / (allNodes.size-1).toFloat}%4.2f or there are ${reachableNodes.size} reachable nodes out of total ${allNodes.size} nodes in the graph")
     (allNodes -- reachableNodes -- Set(initState), loops)
   end unreachableNodes
 

@@ -1,10 +1,10 @@
 package NetGraphAlgebraDefs
 
-import NetGraphAlgebraDefs.NetModelAlgebra.{actionRange, connectedness, createAction, edgeProbability, logger, maxBranchingFactor, maxDepth, maxProperties, propValueRange, statesTotal}
+import NetGraphAlgebraDefs.NetModelAlgebra.{actionRange, connectedness, createAction, desiredReachabilityCoverage, edgeProbability, logger, maxBranchingFactor, maxDepth, maxProperties, propValueRange, statesTotal}
 import Randomizer.{SupplierOfRandomness, UniformProbGenerator}
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.{CreateLogger, NGSConstants}
-import Utilz.NGSConstants.{ACTIONRANGE, ACTIONRANGEDEFAULT, CONNECTEDNESS, CONNECTEDNESSDEFAULT, COSTOFDETECTION, COSTOFDETECTIONDEFAULT, DEFAULTDISSIMULATIONCOEFFICIENT, DEFAULTDISTANCECOEFFICIENT, DEFAULTDISTANCESPREADTHRESHOLD, DEFAULTEDGEPROBABILITY, DEFAULTPERTURBATIONCOEFFICIENT, DISSIMULATIONCOEFFICIENT, DISTANCECOEFFICIENT, DISTANCESPREADTHRESHOLD, DOPPLEGANGERS, DOPPLEGANGERSDEFAULT, EDGEPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT, GRAPHWALKTERMINATIONPOLICY, GRAPHWALKTERMINATIONPOLICYDEFAULT, MALAPPBUDGET, MALAPPBUDGETDEFAULT, MAXBRANCHINGFACTOR, MAXBRANCHINGFACTORDEFAULT, MAXDEPTH, MAXDEPTHDEFAULT, MAXPROPERTIES, MAXPROPERTIESDEFAULT, MAXWALKPATHLENGTHCOEFF, MAXWALKPATHLENGTHCOEFFDEFAULT, NUMBEROFEXPERIMENTS, NUMBEROFEXPERIMENTSDEFAULT, PERTURBATIONCOEFFICIENT, PROPVALUERANGE, PROPVALUERANGEDEFAULT, SEED, SERVICEPENALTY, SERVICEPENALTYDEFAULT, SERVICEREWARD, SERVICEREWARDDEFAULT, SERVICEREWARDPROBABILITY, SERVICEREWARDPROBABILITYDEFAULT, STATESTOTAL, STATESTOTALDEFAULT, TARGETAPPHIGHPENALTY, TARGETAPPHIGHPENALTYDEFAULT, TARGETAPPLOWPENALTY, TARGETAPPLOWPENALTYDEFAULT, TARGETAPPSCORE, TARGETAPPSCOREDEFAULT, WALKS, WALKSDEFAULT}
+import Utilz.NGSConstants.{ACTIONRANGE, ACTIONRANGEDEFAULT, CONNECTEDNESS, CONNECTEDNESSDEFAULT, COSTOFDETECTION, COSTOFDETECTIONDEFAULT, DEFAULTDISSIMULATIONCOEFFICIENT, DEFAULTDISTANCECOEFFICIENT, DEFAULTDISTANCESPREADTHRESHOLD, DEFAULTEDGEPROBABILITY, DEFAULTPERTURBATIONCOEFFICIENT, DESIREDREACHABILITYCOVERAGE, DESIREDREACHABILITYCOVERAGEDEFAULT, DISSIMULATIONCOEFFICIENT, DISTANCECOEFFICIENT, DISTANCESPREADTHRESHOLD, DOPPLEGANGERS, DOPPLEGANGERSDEFAULT, EDGEPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT, GRAPHWALKTERMINATIONPOLICY, GRAPHWALKTERMINATIONPOLICYDEFAULT, MALAPPBUDGET, MALAPPBUDGETDEFAULT, MAXBRANCHINGFACTOR, MAXBRANCHINGFACTORDEFAULT, MAXDEPTH, MAXDEPTHDEFAULT, MAXPROPERTIES, MAXPROPERTIESDEFAULT, MAXWALKPATHLENGTHCOEFF, MAXWALKPATHLENGTHCOEFFDEFAULT, NUMBEROFEXPERIMENTS, NUMBEROFEXPERIMENTSDEFAULT, PERTURBATIONCOEFFICIENT, PROPVALUERANGE, PROPVALUERANGEDEFAULT, SEED, SERVICEPENALTY, SERVICEPENALTYDEFAULT, SERVICEREWARD, SERVICEREWARDDEFAULT, SERVICEREWARDPROBABILITY, SERVICEREWARDPROBABILITYDEFAULT, STATESTOTAL, STATESTOTALDEFAULT, TARGETAPPHIGHPENALTY, TARGETAPPHIGHPENALTYDEFAULT, TARGETAPPLOWPENALTY, TARGETAPPLOWPENALTYDEFAULT, TARGETAPPSCORE, TARGETAPPSCOREDEFAULT, WALKS, WALKSDEFAULT}
 import com.google.common.graph.*
 import org.slf4j.Logger
 
@@ -23,6 +23,9 @@ class NetModel extends NetGraphConnectednessFinalizer:
   require(maxProperties > 0, "The maximum number of properties must be greater than zero")
   require(propValueRange > 0, "The range of property values must be greater than zero")
   require(actionRange > 0, "The range of actions must be greater than zero")
+  require(edgeProbability >= 0 && edgeProbability <= 1, "The edge probability must be between 0 and 1")
+  require(connectedness >= 0 && connectedness <= statesTotal, "The connectedness must be between 0 and the total number of states")
+  require(desiredReachabilityCoverage >= 0 && desiredReachabilityCoverage <= 1, "The desired reachability coverage must be between 0 and 1")
 
   private [this] val stateMachine: NetStateMachine = ValueGraphBuilder.directed().build()
   val modelUUID:String = java.util.UUID.randomUUID.toString
@@ -67,7 +70,7 @@ class NetModel extends NetGraphConnectednessFinalizer:
   end generateModel
 
   def generateModel(forceReachability: Boolean = false): NetGraph =
-    logger.info(s"Generating graph with $statesTotal nodes and ${if forceReachability then "ensuring complete" else "random"} reachability")
+    logger.info(s"Generating a random graph with $statesTotal nodes and ${if forceReachability then s"ensuring ${desiredReachabilityCoverage*100}%" else "random"} reachability")
     createNodes()
     logger.info(s"Created ${stateMachine.nodes().size()} nodes")
     val allNodes: Array[NodeObject] = stateMachine.nodes().asScala.toArray
@@ -119,6 +122,7 @@ object NetModelAlgebra:
   val edgeProbability: Double = getConfigEntry(NGSConstants.configNetGameModel,EDGEPROBABILITY, DEFAULTEDGEPROBABILITY)
   val numberOfExperiments: Int = getConfigEntry(NGSConstants.configNetGameModel,NUMBEROFEXPERIMENTS, NUMBEROFEXPERIMENTSDEFAULT)
   val statesTotal: Int = getConfigEntry(NGSConstants.configNetGameModel,STATESTOTAL, STATESTOTALDEFAULT)
+  val desiredReachabilityCoverage: Double = getConfigEntry(NGSConstants.configNetGameModel,DESIREDREACHABILITYCOVERAGE, DESIREDREACHABILITYCOVERAGEDEFAULT)
   val numberOfWalks: Int = getConfigEntry(NGSConstants.configNetGameModel,WALKS, WALKSDEFAULT)
   val maxBranchingFactor: Int = getConfigEntry(NGSConstants.configNetGameModel,MAXBRANCHINGFACTOR, MAXBRANCHINGFACTORDEFAULT)
   val maxDepth: Int = getConfigEntry(NGSConstants.configNetGameModel,MAXDEPTH, MAXDEPTHDEFAULT)

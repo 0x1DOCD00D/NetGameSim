@@ -41,6 +41,8 @@ object NGSConstants:
   val NUMBEROFEXPERIMENTSDEFAULT: Int = 10
   val STATESTOTAL: String = "statesTotal"
   val STATESTOTALDEFAULT: Int = 30
+  val DESIREDREACHABILITYCOVERAGE: String = "desiredReachabilityCoverage"
+  val DESIREDREACHABILITYCOVERAGEDEFAULT: Double = 0.9d
   val WALKS: String = "numberOfWalks"
   val WALKSDEFAULT: Int = 1500
   val MAXBRANCHINGFACTOR = "maxBranchingFactor"

@@ -8,11 +8,12 @@ import guru.nidi.graphviz.attribute.{Color, Font, Label, LinkAttr, Rank, Style}
 
 import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Success, Try}
-import guru.nidi.graphviz.engine.{Format, Graphviz, GraphvizCmdLineEngine, GraphvizJdkEngine, GraphvizServerEngine}
+import guru.nidi.graphviz.engine.{EngineResult, Format, Graphviz, GraphvizCmdLineEngine, GraphvizJdkEngine, GraphvizServerEngine}
 import guru.nidi.graphviz.model.Factory.{graph, linkAttrs, node, to}
 import guru.nidi.graphviz.model.{Graph, Node}
 
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 trait GraphStore:
   self: NetGraph =>
@@ -58,6 +59,8 @@ trait GraphStore:
         }
         val g = graph(name).directed().`with`(linkedGraph.values.toList: _*).
           linkAttr().`with` ("class", "link-class").`with`(linkedGraph.values.toList: _*)
-        Try(Graphviz.fromGraph(g).render(outputImageFormat).toFile(new File(s"$dir$fileName.${outputImageFormat.fileExtension}"))) match
-          case Failure(exception) => logger.error(s"Failed to render the graph to $dir$fileName.${outputImageFormat.fileExtension} : ", exception)
-          case Success(value) => logger.info(s"Successfully rendered the graph to $dir$fileName.${outputImageFormat.fileExtension}")
+        Try(new GraphvizCmdLineEngine()).map(cmdlnEngine => cmdlnEngine.timeout(2, TimeUnit.MINUTES)).map { cmdlnEngine =>
+          Graphviz.useEngine(cmdlnEngine)
+          Graphviz.fromGraph(g).render(Format.DOT).toFile(new File(s"$dir$fileName.${Format.DOT.fileExtension}"))
+        }.map(_ => NetGraph.logger.info(s"Successfully rendered the graph to $dir$fileName.${outputImageFormat.fileExtension}"))
+          .recover { case e => NetGraph.logger.error(s"Failed to render the graph to $dir$fileName.${outputImageFormat.fileExtension} : ", e) }
