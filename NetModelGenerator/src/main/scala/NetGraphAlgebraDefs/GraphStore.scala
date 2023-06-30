@@ -32,7 +32,9 @@ trait GraphStore:
         .recover { case e => NetGraph.logger.error(s"Failed to persist the graph to $dir$fileName : ", e) }
     end persist
 
-    def toDotVizFormat(name: String, dir: String = outputDirectory, fileName: String, outputImageFormat: Format = Format.PNG): Unit =
+//  Use the following graphviz command to render the graph to an image:
+//  sfdp -x -Goverlap=scale -Tpng graph.dot > graph.png
+    def toDotVizFormat(name: String, dir: String = outputDirectory, fileName: String, outputImageFormat: Format = Format.DOT): Unit =
       val nodes: List[NodeObject] = initState :: sm.nodes().asScala.toList
       if nodes.count(_.id == 0) < 1 then
         logger.error("The graph does not contain a start node with id 0")

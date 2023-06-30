@@ -58,8 +58,8 @@ compileOrder := CompileOrder.JavaThenScala
 test / fork := true
 run / fork := true
 run / javaOptions ++= Seq(
-  "-Xms1512M",
-  "-Xmx20000M"
+  "-Xms4096M",
+  "-Xmx80000M"
 )
 
 val jarName = "netmodelsim.jar"

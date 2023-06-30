@@ -17,6 +17,7 @@ import scala.util.{Failure, Random, Success, Try}
 type NetStateMachine = MutableValueGraph[NodeObject, Action]
 class NetModel extends NetGraphConnectednessFinalizer:
   require(statesTotal > 0, "The total number of states must be positive")
+  require(connectedness < statesTotal, "The total number of edges from the init node must be less than the number of states")
   require(maxBranchingFactor > 0, "The maximum branching factor must be greater than zero")
   require(maxDepth > 0, "The maximum depth must be greater than zero")
   require(maxProperties > 0, "The maximum number of properties must be greater than zero")
@@ -65,32 +66,26 @@ class NetModel extends NetGraphConnectednessFinalizer:
     else None
   end generateModel
 
-  def generateModel(forceLinkOrphans: Boolean = false): NetGraph =
+  def generateModel(forceReachability: Boolean = false): NetGraph =
+    logger.info(s"Generating graph with $statesTotal nodes and ${if forceReachability then "ensuring complete" else "random"} reachability")
     createNodes()
+    logger.info(s"Created ${stateMachine.nodes().size()} nodes")
     val allNodes: Array[NodeObject] = stateMachine.nodes().asScala.toArray
-    val pvIter: Iterator[Boolean] = SupplierOfRandomness.randProbs(allNodes.length*allNodes.length).map(_ < edgeProbability).iterator
-    allNodes.foreach(node=>
-      allNodes.foreach(other=>
-        if node != other && pvIter.nonEmpty && pvIter.next() then
-          stateMachine.putEdgeValue(node, other, createAction(node, other))
-        else ()
-      )
-    )
+    val nodesLength = allNodes.length
+    val totalCombinationsOfNodes = allNodes.length*allNodes.length
+    SupplierOfRandomness.randProbs(totalCombinationsOfNodes).map(_ < edgeProbability).zipWithIndex.filter(_._1).map(v=>(v._2/nodesLength, v._2%nodesLength)).foreach {
+      case (from, to) =>
+        val nodeFrom = allNodes(from)
+        val nodeTo = allNodes(to)
+        if nodeTo != nodeFrom then
+          logger.info(s"Adding edge from ${nodeFrom.id} to ${nodeTo.id}")
+          stateMachine.putEdgeValue(nodeFrom, nodeTo, createAction(nodeFrom, nodeTo))
+    }
     logger.info(s"Generated graph with ${stateMachine.nodes().size()} nodes and ${stateMachine.edges().size()} edges")
     val initState: NodeObject = addInitState(allNodes)
     val generatedGraph: NetGraph = NetGraph(stateMachine, initState)
-    if forceLinkOrphans then
-      val unreachableNodes: Set[NodeObject] = generatedGraph.unreachableNodes()._1
-      logger.info(s"Linking ${unreachableNodes.size} orphans to the initial state")
-      val reachableNodes: Set[NodeObject] = stateMachine.nodes().asScala.toSet -- unreachableNodes
-      val rnSize = reachableNodes.size
-      if rnSize > 0 then
-        val arrReachableNodes = reachableNodes.toArray
-        unreachableNodes.foreach(urn =>
-          val index = SupplierOfRandomness.onDemand(maxv = rnSize)
-          stateMachine.putEdgeValue(arrReachableNodes(index), urn, createAction(arrReachableNodes(index), urn))
-        )
-      else unreachableNodes.foreach(unreachableNode =>stateMachine.putEdgeValue(initState, unreachableNode, createAction(initState, unreachableNode)))
+    logger.info(s"Added init state connected with $connectedness nodes")
+    if forceReachability then generatedGraph.forceReachability
     generatedGraph
   end generateModel
 
@@ -102,38 +97,16 @@ class NetModel extends NetGraphConnectednessFinalizer:
       maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties), SupplierOfRandomness.randProbs(1).head
     )
     stateMachine.addNode(newInitNode)
-    val orphans: Array[NodeObject] = allNodes.filter(node =>
-      stateMachine.incidentEdges(node).isEmpty)
-    val pvIter: Iterator[Boolean] = SupplierOfRandomness.randProbs(orphans.length).map(_ < edgeProbability).iterator
-    orphans.foreach {
+    allNodes.sortBy(node => (stateMachine.outDegree(node), stateMachine.inDegree(node)))( Ordering.Tuple2(Ordering.Int.reverse, Ordering.Int)).take(connectedness).foreach {
       node =>
-        if node != newInitNode && pvIter.nonEmpty && pvIter.next() then
+        if node != newInitNode then
           stateMachine.putEdgeValue(newInitNode, node, createAction(newInitNode, node))
+          logger.info(s"Added edge from the init node to ${node.id}")
         else ()
     }
-    val orphansIter: Iterator[Boolean] = SupplierOfRandomness.randProbs(orphans.length*orphans.length).map(_ < edgeProbability).iterator
-    orphans.foreach {
-      node =>
-          orphans.foreach(orph =>
-            if node != orph && orphansIter.nonEmpty && orphansIter.next() then
-              if stateMachine.edgeValue(node, orph).isEmpty then
-                stateMachine.putEdgeValue(node, orph, createAction(node, orph))
-              else if stateMachine.edgeValue(orph, node).isEmpty then
-                stateMachine.putEdgeValue(orph, node, createAction(orph, node))
-              else ()
-            else ()
-          )
-    }
-
-    val connected: Array[NodeObject] = allNodes.filter(node => stateMachine.outDegree(node) > (if maxOutdegree >= connectedness then connectedness else maxOutdegree - 1))
-    connected.foreach(node =>
-      orphans.foreach(orph =>
-        if node != orph && SupplierOfRandomness.randProbs(1).head < edgeProbability then
-          stateMachine.putEdgeValue(node, orph, createAction(node, orph))
-        else ()
-      )
-    )
+    logger.info(s"Linked the init node to $connectedness nodes")
     newInitNode
+  end addInitState
 
 object NetModelAlgebra:
   val logger:Logger = CreateLogger(classOf[NetModel])
