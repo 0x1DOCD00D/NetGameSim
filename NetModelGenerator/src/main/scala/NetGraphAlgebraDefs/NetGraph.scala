@@ -17,6 +17,8 @@ import scala.collection.immutable.TreeSeqMap.OrderBy
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Success, Try, Using}
+import scala.collection.parallel.*
+import scala.collection.parallel.CollectionConverters.*
 
 case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphStore:
   import NetGraph.logger
@@ -27,7 +29,7 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
 
   def totalNodes: Int = sm.nodes().asScala.count(_ => true)
 
-  def forceReachability: Set[NodeObject] =
+  @tailrec final def forceReachability: Set[NodeObject] =
     val orphanNodes: List[NodeObject] = unreachableNodes()._1.toList
     logger.info(s"Force reachability: there are ${orphanNodes.size} orphan nodes in the graph")
     if orphanNodes.size <= 0 then Set.empty
@@ -39,12 +41,12 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
         Set.empty
       else
         val rn: NodeObject = reachableNodes.head
-        val unr: NodeObject = orphanNodes.toList.minBy(node => sm.inDegree(node))
+        val unr: NodeObject = orphanNodes.minBy(node => sm.inDegree(node))
         sm.putEdgeValue(rn, unr, createAction(rn, unr))
 
         val nodesLength = orphanNodes.size
         val totalCombinationsOfNodes = nodesLength * nodesLength
-        SupplierOfRandomness.randProbs(totalCombinationsOfNodes).map(_ < edgeProbability).zipWithIndex.filter(_._1).map(v => (v._2 / nodesLength, v._2 % nodesLength)).foreach {
+        SupplierOfRandomness.randProbs(totalCombinationsOfNodes).par.map(_ < edgeProbability).zipWithIndex.filter(_._1).map(v => (v._2 / nodesLength, v._2 % nodesLength)).par.foreach {
           case (from, to) =>
             val nodeFrom = orphanNodes(from)
             val nodeTo = orphanNodes(to)

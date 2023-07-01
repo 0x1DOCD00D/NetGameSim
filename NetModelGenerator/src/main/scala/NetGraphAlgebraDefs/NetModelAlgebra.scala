@@ -13,6 +13,9 @@ import scala.collection.immutable.TreeSeqMap.OrderBy
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Random, Success, Try}
+import scala.collection.parallel.*
+import scala.collection.parallel.CollectionConverters.*
+
 
 type NetStateMachine = MutableValueGraph[NodeObject, Action]
 class NetModel extends NetGraphConnectednessFinalizer:
@@ -31,7 +34,7 @@ class NetModel extends NetGraphConnectednessFinalizer:
   val modelUUID:String = java.util.UUID.randomUUID.toString
 
   private def createNodes(): Unit =
-    (1 to statesTotal).foreach(id=>
+    (1 to statesTotal).par.foreach(id=>
       if !stateMachine.addNode(NodeObject(id, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
         SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
         maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
@@ -54,11 +57,11 @@ class NetModel extends NetGraphConnectednessFinalizer:
     }
 
     if sanityCheck then
-      nodes.foreach { node =>
+      nodes.par.foreach { node =>
         if !stateMachine.addNode(node) then logger.error(s"Could not add node with id ${node.id}")
         ()
       }
-      edges.foreach { edge =>
+      edges.par.foreach { edge =>
         val nodeFrom: NodeObject = nodes.find(_.id == edge.fromNode).get
         val nodeTo: NodeObject = nodes.find(_.id == edge.toNode).get
         Try(stateMachine.putEdgeValue(nodeFrom, nodeTo, edge)) match
@@ -76,12 +79,12 @@ class NetModel extends NetGraphConnectednessFinalizer:
     val allNodes: Array[NodeObject] = stateMachine.nodes().asScala.toArray
     val nodesLength = allNodes.length
     val totalCombinationsOfNodes = allNodes.length*allNodes.length
-    SupplierOfRandomness.randProbs(totalCombinationsOfNodes).map(_ < edgeProbability).zipWithIndex.filter(_._1).map(v=>(v._2/nodesLength, v._2%nodesLength)).foreach {
+    SupplierOfRandomness.randProbs(totalCombinationsOfNodes).par.map(_ < edgeProbability).zipWithIndex.filter(_._1).map(v=>(v._2/nodesLength, v._2%nodesLength)).par.foreach {
       case (from, to) =>
         val nodeFrom = allNodes(from)
         val nodeTo = allNodes(to)
         if nodeTo != nodeFrom then
-          logger.info(s"Adding edge from ${nodeFrom.id} to ${nodeTo.id}")
+          logger.info(s"Adding an edge from ${nodeFrom.id} to ${nodeTo.id}")
           stateMachine.putEdgeValue(nodeFrom, nodeTo, createAction(nodeFrom, nodeTo))
     }
     logger.info(s"Generated graph with ${stateMachine.nodes().size()} nodes and ${stateMachine.edges().size()} edges")
@@ -100,7 +103,7 @@ class NetModel extends NetGraphConnectednessFinalizer:
       maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties), SupplierOfRandomness.randProbs(1).head
     )
     stateMachine.addNode(newInitNode)
-    allNodes.sortBy(node => (stateMachine.outDegree(node), stateMachine.inDegree(node)))( Ordering.Tuple2(Ordering.Int.reverse, Ordering.Int)).take(connectedness).foreach {
+    allNodes.sortBy(node => (stateMachine.outDegree(node), stateMachine.inDegree(node)))( Ordering.Tuple2(Ordering.Int.reverse, Ordering.Int)).take(connectedness).par.foreach {
       node =>
         if node != newInitNode then
           stateMachine.putEdgeValue(newInitNode, node, createAction(newInitNode, node))
