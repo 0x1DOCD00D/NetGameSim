@@ -31,8 +31,8 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
   val node1: NodeObject = NodeObject(id = 1, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10,1)
   val node2: NodeObject = NodeObject(id = 2, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10,1)
   val node3: NodeObject = NodeObject(id = 3, children = 5, props = 10, propValueRange = 20, maxDepth = 5, maxBranchingFactor = 5, maxProperties = 10,1)
-  val edge12: Action = Action(actionType = 1, node1.id, node2.id, fromId = 1, toId = 2, resultingValue = Some(12), cost = 0.12)
-  val edge23: Action = Action(actionType = 2, node2.id, node3.id, fromId = 2, toId = 3, resultingValue = Some(23), cost = 0.23)
+  val edge12: Action = Action(actionType = 1, node1, node2, fromId = 1, toId = 2, resultingValue = Some(12), cost = 0.12)
+  val edge23: Action = Action(actionType = 2, node2, node3, fromId = 2, toId = 3, resultingValue = Some(23), cost = 0.23)
   def createTestGraph(): NetGraph = {
     val graph1: MutableValueGraph[NodeObject, Action] = ValueGraphBuilder.directed().build()
 
@@ -71,7 +71,7 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     logger.info(modificationRecord.toString)
     logger.info(graph.sm.toString)
     graph.sm.nodes().size shouldBe 2
-    modificationRecord shouldBe Vector((OriginalNetComponent(NodeObject(1,5,10,1,20,5,5,10,1.0)),NodeRemoved(NodeObject(1,5,10,1,20,5,5,10,1.0))), (OriginalNetComponent(NodeObject(1,5,10,1,20,5,5,10,1.0)),EdgeRemoved(Action(1,1,2,1,2,Some(12),0.12))))
+    modificationRecord shouldBe Vector((OriginalNetComponent(NodeObject(1,5,10,1,20,5,5,10,1.0)),NodeRemoved(NodeObject(1,5,10,1,20,5,5,10,1.0))), (OriginalNetComponent(NodeObject(1,5,10,1,20,5,5,10,1.0)),EdgeRemoved(Action(1,NodeObject(1,5,10,1,20,5,5,10,1.0),NodeObject(2,5,10,1,20,5,5,10,1.0),1,2,Some(12),0.12))))
     val invMR = inverseMR(modificationRecord)
     logger.info(s"Inverse MR: ${invMR.toString}")
   }
@@ -158,8 +158,8 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     val walker = RandomWalker(graph)
     val walk: PATHRESULT = walker.walk().head
     logger.info(s"Original walk: ${walk.toString}")
-    mapAppBudget shouldBe 110
-    targetAppScore shouldBe 200
+    mapAppBudget shouldBe 2700
+    targetAppScore shouldBe 5.0
     val resCosts = CostRewardCalculator(walk, invMR, List())(MalAppBudget(mapAppBudget), TargetAppScore(targetAppScore))
     resCosts._1._1.toDouble should be >= 110d
     resCosts._1._2.toDouble should be <= 200.2d

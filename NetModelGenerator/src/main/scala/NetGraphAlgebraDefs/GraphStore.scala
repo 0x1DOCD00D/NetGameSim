@@ -31,7 +31,6 @@ trait GraphStore:
         oos.close()
       }.map(_ => NetGraph.logger.info(s"Successfully persisted the graph to $dir$fileName"))
         .recover { case e => NetGraph.logger.error(s"Failed to persist the graph to $dir$fileName : ", e) }
-    end persist
 
 //  Use the following graphviz command to render the graph to an image:
 //  sfdp -x -Goverlap=scale -Tpng graph.dot > graph.png
@@ -42,7 +41,7 @@ trait GraphStore:
       else
         val edges: List[Action] = sm.edges().asScala.toList.map { edge =>
           sm.edgeValue(edge.source(), edge.target()).get
-        }.sortBy(_.fromNode)
+        }.sortBy(_.fromNode.id)
         val nodesMap = nodes.foldLeft(Map[Int, Node]()) { case (acc, nd) =>
           acc + (nd.id -> (
             if nd.id == 0 then
@@ -51,8 +50,8 @@ trait GraphStore:
               node(nd.id.toString)))
         }
         val linkedGraph = edges.foldLeft(nodesMap) { case (acc, edge) =>
-          if acc.contains(edge.fromNode) && acc.contains(edge.toNode) then
-            acc + (edge.fromNode -> acc(edge.fromNode).link(to(acc(edge.toNode)).`with`(weight(if (edge.cost*10).floor < 1 then 1 else (edge.cost*10).floor))))
+          if acc.contains(edge.fromNode.id) && acc.contains(edge.toNode.id) then
+            acc + (edge.fromNode.id -> acc(edge.fromNode.id).link(to(acc(edge.toNode.id)).`with`(weight(if (edge.cost*10).floor < 1 then 1 else (edge.cost*10).floor))))
           else
             logger.error(s"Edge $edge is not valid because it contains a node that is not in the graph")
             acc

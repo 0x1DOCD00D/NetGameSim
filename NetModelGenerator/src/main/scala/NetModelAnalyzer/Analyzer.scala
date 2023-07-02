@@ -8,16 +8,29 @@
 
 package NetModelAnalyzer
 
-import NetGraphAlgebraDefs.NetModelAlgebra.{dopplegangers, mapAppBudget, numberOfExperiments, targetAppScore}
-import NetGraphAlgebraDefs.{NetGraph, NetGraphComponent, NetModelAlgebra, GraphPerturbationAlgebra, NodeObject}
+import NetGraphAlgebraDefs.NetModelAlgebra.{createAction, dopplegangers, mapAppBudget, numberOfExperiments, targetAppScore}
+import NetGraphAlgebraDefs.{Action, GraphPerturbationAlgebra, NetGraph, NetGraphComponent, NetModelAlgebra, NodeObject}
 import NetGraphAlgebraDefs.GraphPerturbationAlgebra.{ModificationRecord, ModificationRecordInverse, inverseMR}
 import NetModelAnalyzer.Budget.{MalAppBudget, TargetAppScore}
+import com.google.common.graph.{EndpointPair, MutableValueGraph}
+import org.jgrapht.alg.interfaces.VertexCoverAlgorithm
+import org.jgrapht.alg.vertexcover.RecursiveExactVCImpl
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.jdk.CollectionConverters.*
 
 object Analyzer:
+  def apply(g: NetGraph): List[Int] =
+    import org.jgrapht.*
+    import org.jgrapht.graph.*
+    import org.jgrapht.graph.guava.*
+
+    val jg: MutableValueGraphAdapter[NodeObject, Action] = new MutableValueGraphAdapter(g.sm, createAction(g.initState,g.initState), (x: Action) => x.cost)
+    val alg: VertexCoverAlgorithm[NodeObject] = new RecursiveExactVCImpl(jg)
+    val cover: VertexCoverAlgorithm.VertexCover[NodeObject] = alg.getVertexCover()
+    cover.asScala.toList.map(_.id)
+
   def apply(graph: NetGraph, mr: ModificationRecordInverse, numberOfWalks:Int, appName: String): (COSTTUPLE, DetectedModifiedComponents) =
     @tailrec def computeTotalCostsRewards(allWalks: List[PATHRESULT], cr: COSTTUPLE, dc: DetectedModifiedComponents): (COSTTUPLE, DetectedModifiedComponents) =
       allWalks match
@@ -99,12 +112,12 @@ object Analyzer:
           logger.info(s"Perturbing doppleganger app model $num")
             GraphPerturbationAlgebra(graph.copy)
         )
-        if pms.exists(_._2.size == 0) then logger.error("Perturbed models are empty")
+        if pms.exists(_._2.isEmpty) then logger.error("Perturbed models are empty")
         else
           logger.info("Successfully created perturbed models")
           val tappCosts: (COSTTUPLE, DetectedModifiedComponents) = Analyzer(tappModel._1, inverseMR(tappModel._2), NetModelAlgebra.numberOfWalks, "Target")
           val allCosts: List[(COSTTUPLE, DetectedModifiedComponents)] = pms.zipWithIndex.map {
-            case (pm, index) => Analyzer(pm._1, inverseMR(pm._2), NetModelAlgebra.numberOfWalks, s"Doppleganger_${index}")
+            case (pm, index) => Analyzer(pm._1, inverseMR(pm._2), NetModelAlgebra.numberOfWalks, s"Doppleganger_$index")
           }
           logger.info(s"Target app costs: ${tappCosts._1}")
           val listOfCosts: List[COSTTUPLE] = tappCosts._1 :: allCosts.map(_._1)

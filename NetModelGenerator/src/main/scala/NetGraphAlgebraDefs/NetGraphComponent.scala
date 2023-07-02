@@ -26,7 +26,7 @@ case class NodeObject(id: Int, children: Int, props: Int, currentDepth: Int = 1,
       SupplierOfRandomness.randProbs(1).head
     )
 
-case class Action(actionType: Int, fromNode: Int, toNode: Int, fromId: Int, toId: Int, resultingValue: Option[Int], cost: Double) extends NetGraphComponent:
+case class Action(actionType: Int, fromNode: NodeObject, toNode: NodeObject, fromId: Int, toId: Int, resultingValue: Option[Int], cost: Double) extends NetGraphComponent:
   def modify: Action = Action(SupplierOfRandomness.onDemand(maxv = NetModelAlgebra.actionRange), fromNode, toNode, fromId, toId, resultingValue, SupplierOfRandomness.randProbs(1).head)
 
 case object TerminalNode extends NetGraphComponent

@@ -46,17 +46,20 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
 
         val nodesLength = orphanNodes.size
         val totalCombinationsOfNodes = nodesLength * nodesLength
-        SupplierOfRandomness.randProbs(totalCombinationsOfNodes).par.map(_ < edgeProbability).zipWithIndex.filter(_._1).map(v => (v._2 / nodesLength, v._2 % nodesLength)).par.foreach {
+        val nodes2AddEdges: ParSeq[(Int, Int)] = SupplierOfRandomness.randProbs(totalCombinationsOfNodes).par.map(_ < edgeProbability).zipWithIndex.filter(_._1 == true).map(v => (v._2 / nodesLength, v._2 % nodesLength))
+        nodes2AddEdges.seq.foreach {
           case (from, to) =>
-            val nodeFrom = orphanNodes(from)
-            val nodeTo = orphanNodes(to)
-            if nodeTo != nodeFrom then
-              if sm.edgeValue(nodeFrom, nodeTo).isEmpty then
-                logger.info(s"Adding an edge from orphan ${nodeFrom.id} to orphan ${nodeTo.id}")
-                sm.putEdgeValue(nodeFrom, nodeTo, createAction(nodeFrom, nodeTo))
-              else if sm.edgeValue(nodeTo, nodeFrom).isEmpty then
-                logger.info(s"Adding an edge from orphan ${nodeTo.id} to orphan ${nodeFrom.id}")
-                sm.putEdgeValue(nodeTo, nodeFrom, createAction(nodeTo, nodeFrom))
+            if from != to then
+              val nodeFrom = orphanNodes(from)
+              val nodeTo = orphanNodes(to)
+              if nodeTo != nodeFrom then
+                if sm.edgeValue(nodeFrom, nodeTo).isEmpty then
+                  logger.debug(s"Adding an edge from orphan ${nodeFrom.id} to orphan ${nodeTo.id}")
+                  sm.putEdgeValue(nodeFrom, nodeTo, createAction(nodeFrom, nodeTo))
+                else if sm.edgeValue(nodeTo, nodeFrom).isEmpty then
+                  logger.debug(s"Adding an edge from orphan ${nodeTo.id} to orphan ${nodeFrom.id}")
+                  sm.putEdgeValue(nodeTo, nodeFrom, createAction(nodeTo, nodeFrom))
+                else ()
               else ()
         }
         forceReachability
@@ -117,7 +120,7 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
       (rns, loopsInGraph)
     }
     val allNodes: Set[NodeObject] = sm.nodes().asScala.toSet
-    logger.info(f"The reachability ratio is ${reachableNodes.size.toFloat * 100 / (allNodes.size-1).toFloat}%4.2f or there are ${reachableNodes.size} reachable nodes out of total ${allNodes.size} nodes in the graph")
+    logger.info(f"The reachability ratio is ${reachableNodes.size.toFloat * 100 / (allNodes.size-1).toFloat}%4.2f or there are ${reachableNodes.size} reachable nodes out of total ${allNodes.size-1} nodes in the graph")
     (allNodes -- reachableNodes -- Set(initState), loops)
   end unreachableNodes
 
