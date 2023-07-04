@@ -16,6 +16,7 @@ import scala.jdk.CollectionConverters.*
 import scala.util.{Failure, Random, Success, Try}
 import scala.collection.parallel.*
 import scala.collection.parallel.CollectionConverters.*
+import scala.collection.parallel.immutable.ParVector
 
 
 type NetStateMachine = MutableValueGraph[NodeObject, Action]
@@ -35,10 +36,8 @@ class NetModel extends NetGraphConnectednessFinalizer:
   val modelUUID:String = java.util.UUID.randomUUID.toString
 
   private def createNodes(): Unit =
-    logger.info(s"Random value ${SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor,repeatable = false)}")
     val allNodes: ParSeq[NodeObject] = (1 to statesTotal).par.map { id =>
-      logger.info(s"Creating node with id $id")
-      val n = NodeObject(
+      NodeObject(
         id = id,
         children = SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor,repeatable = false),
         props = SupplierOfRandomness.onDemandInt(pmaxv = maxProperties, repeatable = false),
@@ -48,8 +47,6 @@ class NetModel extends NetGraphConnectednessFinalizer:
         maxProperties = SupplierOfRandomness.onDemandInt(pmaxv = maxProperties, repeatable = false),
         storedValue = SupplierOfRandomness.onDemandReal(repeatable = false)
       )
-      logger.info(s"Created node with id $id")
-      n
     }
     logger.info(s"Inserting ${allNodes.size} created nodes into the graph")
     allNodes.toList.foreach( node => if !stateMachine.addNode(node) then logger.error(s"Could not add node with id ${node.id}") else ())
@@ -91,46 +88,47 @@ class NetModel extends NetGraphConnectednessFinalizer:
       logger.info(s"$msg: ${progress * 100 / total}%")
     ()
   end reportProgress
-  def generateModel(forceReachability: Boolean = false): NetGraph =
+  def generateModel(forceReachability: Boolean = false): Option[NetGraph] =
     logger.info(s"Generating a random graph with $statesTotal nodes and ${if forceReachability then s"ensuring ${desiredReachabilityCoverage*100}%" else "random"} reachability")
     createNodes()
     logger.info(s"Created ${stateMachine.nodes().size()} nodes")
-    val allNodes: Array[NodeObject] = stateMachine.nodes().asScala.toArray
-    val nodesLength = allNodes.length
-    val totalCombinationsOfNodes = nodesLength * nodesLength
-    val nodes4Edges: ParSeq[(Int, Int)] = SupplierOfRandomness.randProbs(totalCombinationsOfNodes)().par.map(_ < edgeProbability).zipWithIndex.filter(_._1 == true).map(v => (v._2 / nodesLength, v._2 % nodesLength))
-    logger.info(s"Ready to generate ${nodes4Edges.length} edge candidates")
-//    val rp = reportProgress("Generated edges", nodes4Edges.length, nodes4Edges.length/1000) _
-//    val edges2Add:ParSeq[Action] = nodes4Edges.par.zipWithIndex.map {
-    val edges2Add:List[Action] = nodes4Edges.seq.toList.zipWithIndex.flatMap {
-      case ((from, to), count) =>
-        if from == to then None
-        else
-          //          node numbering starts from 1, since 0 is reserved for the init node
-          val nodeFrom = allNodes(from)
-          if nodeFrom.id - 1 != from then logger.error(s"Node from with id ${nodeFrom.id} has index $from")
-          val nodeTo = allNodes(to)
-          if nodeTo.id - 1 != to then logger.error(s"Node to with id ${nodeTo.id} has index $to")
-          logger.info(s"Generating edges $count out of ${nodes4Edges.length}")
-          Some(createAction(nodeFrom, nodeTo))
-}
-    logger.info(s"Generated ${nodes4Edges.length} edge candidates out of $totalCombinationsOfNodes possible combinations")
-    val tenPercent = (nodes4Edges.length * 0.5).toInt
-    edges2Add.zipWithIndex.foreach {
-      (edge, index) =>
-        if index % tenPercent == 0 then logger.info(s"Inserted $index edges into the graph out of ${nodes4Edges.length}")
-        logger.debug(s"Adding an edge from ${edge.fromNode.id} to ${edge.toNode.id}")
-        stateMachine.putEdgeValue(edge.fromNode, edge.toNode, edge)
-    }
-    logger.info(s"Generated graph with ${stateMachine.nodes().size()} nodes and ${stateMachine.edges().size()} edges")
-    val initState: NodeObject = addInitState(allNodes)
-    val generatedGraph: NetGraph = NetGraph(stateMachine, initState)
-    logger.info(s"Added init state connected with $connectedness nodes")
-    if forceReachability then generatedGraph.forceReachability
-    generatedGraph
+    val allNodes: Vector[NodeObject] = stateMachine.nodes().asScala.toVector
+    val nodesLength:Int = allNodes.length
+    if nodesLength.toDouble >= math.sqrt(Long.MaxValue) then
+      logger.error(s"Too many nodes to generate edges for: $nodesLength")
+      None
+    else
+      val totalCombinationsOfNodes:Long = nodesLength * nodesLength
+      val nodes4Edges: ParVector[(Int, Int)] = SupplierOfRandomness.randProbs(totalCombinationsOfNodes)().par.map(_ < edgeProbability).zipWithIndex.filter(_._1 == true).map(v => (v._2 / nodesLength, v._2 % nodesLength))
+      logger.info(s"Ready to generate ${nodes4Edges.length} edge candidates")
+      val edges2Add:ParVector[Action] = nodes4Edges.toVector.par.zipWithIndex.flatMap {
+        case ((from, to), count) =>
+          if from == to then None
+          else
+            //          node numbering starts from 1, since 0 is reserved for the init node
+            val nodeFrom = allNodes(from)
+            if nodeFrom.id - 1 != from then logger.error(s"Node from with id ${nodeFrom.id} has index $from")
+            val nodeTo = allNodes(to)
+            if nodeTo.id - 1 != to then logger.error(s"Node to with id ${nodeTo.id} has index $to")
+            Some(createAction(nodeFrom, nodeTo))
+      }
+      logger.info(s"Generated ${nodes4Edges.length} edge candidates out of $totalCombinationsOfNodes possible combinations")
+      val tenPercent = (nodes4Edges.length * 0.5).toInt
+      edges2Add.zipWithIndex.foreach {
+        (edge, index) =>
+          if index % tenPercent == 0 then logger.info(s"Inserted $index edges into the graph out of ${nodes4Edges.length}")
+          logger.debug(s"Adding an edge from ${edge.fromNode.id} to ${edge.toNode.id}")
+          stateMachine.putEdgeValue(edge.fromNode, edge.toNode, edge)
+      }
+      logger.info(s"Generated graph with ${stateMachine.nodes().size()} nodes and ${stateMachine.edges().size()} edges")
+      val initState: NodeObject = addInitState(allNodes)
+      val generatedGraph: NetGraph = NetGraph(stateMachine, initState)
+      logger.info(s"Added init state connected with $connectedness nodes")
+      if forceReachability then generatedGraph.forceReachability
+      Some(generatedGraph)
   end generateModel
 
-  def addInitState(allNodes: Array[NodeObject]): NodeObject =
+  def addInitState(allNodes: Vector[NodeObject]): NodeObject =
     val maxOutdegree = stateMachine.nodes().asScala.map(node => stateMachine.outDegree(node)).max
     val newInitNode: NodeObject = NodeObject(0, SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor),
       SupplierOfRandomness.onDemandInt(pmaxv = maxProperties), propValueRange = SupplierOfRandomness.onDemandInt(pmaxv = propValueRange),
@@ -198,7 +196,7 @@ object NetModelAlgebra:
 
   def getFields: Map[String, Double] = this.getClass.getDeclaredFields.filter(field => field.getType == classOf[Double]).map(field => field.getName -> field.get(this).asInstanceOf[Double]).toMap[String, Double] ++  this.getClass.getDeclaredFields.filter(field => field.getType == classOf[Int]).map(field => field.getName -> field.get(this).toString.toDouble).toMap[String, Double]
 
-  def apply(forceLinkOrphans: Boolean = true): NetGraph = new NetModel().generateModel(forceLinkOrphans)
+  def apply(forceLinkOrphans: Boolean = true): Option[NetGraph] = new NetModel().generateModel(forceLinkOrphans)
   def apply(nodes: List[NodeObject], edges: List[Action]): Option[NetGraph] = new NetModel().generateModel(nodes, edges)
 
   def createAction(from: NodeObject, to: NodeObject): Action =

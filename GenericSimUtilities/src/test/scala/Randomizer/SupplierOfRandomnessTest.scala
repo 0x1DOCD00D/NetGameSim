@@ -8,7 +8,7 @@ class SupplierOfRandomnessTest extends AnyFlatSpec with Matchers {
   behavior of "supplier of the random numbers"
 
   it should "obtain ten random probs" in {
-    val lst:List[Double] = SupplierOfRandomness.randProbs(10)()
+    val lst:Vector[Double] = SupplierOfRandomness.randProbs(10)()
     lst.length shouldBe 10
   }
 

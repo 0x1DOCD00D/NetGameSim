@@ -2,16 +2,25 @@ package NetGraphAlgebraDefs
 
 import Randomizer.{SupplierOfRandomness, UniformProbGenerator}
 import Randomizer.UniformProbGenerator.*
+import scala.collection.parallel.*
+import scala.collection.parallel.CollectionConverters.*
+
 trait NetGraphComponent
 
 case class NodeObject(id: Int, children: Int, props: Int, currentDepth: Int = 1, propValueRange:Int, maxDepth:Int, maxBranchingFactor:Int, maxProperties:Int, storedValue: Double) extends NetGraphComponent:
-  val properties: List[Int] = List.fill(props)(SupplierOfRandomness.onDemandInt(pmaxv = propValueRange, repeatable = false))
+  val properties: List[Int] = 1.to(props).par.map(_=>SupplierOfRandomness.onDemandInt(pmaxv = propValueRange, repeatable = false)).toList
   val childrenObjects: List[NodeObject] =
     if currentDepth <= maxDepth then
       List.tabulate(children)(cid => NodeObject(cid+id+1,
-        SupplierOfRandomness.onDemandInt(pmaxv=maxBranchingFactor, repeatable = false),
-        SupplierOfRandomness.onDemandInt(pmaxv=maxProperties, repeatable = false), currentDepth + 1,
-        propValueRange, maxDepth, maxBranchingFactor, maxProperties, SupplierOfRandomness.onDemandReal(repeatable = false)))
+        currentDepth = currentDepth + 1,
+        children = SupplierOfRandomness.onDemandInt(pmaxv = NetGraphAlgebraDefs.NetModelAlgebra.maxBranchingFactor, repeatable = false),
+        props = SupplierOfRandomness.onDemandInt(pmaxv = NetGraphAlgebraDefs.NetModelAlgebra.maxProperties, repeatable = false),
+        propValueRange = SupplierOfRandomness.onDemandInt(pmaxv = NetGraphAlgebraDefs.NetModelAlgebra.propValueRange, repeatable = false),
+        maxDepth = SupplierOfRandomness.onDemandInt(pmaxv = NetGraphAlgebraDefs.NetModelAlgebra.maxDepth, repeatable = false),
+        maxBranchingFactor = SupplierOfRandomness.onDemandInt(pmaxv = NetGraphAlgebraDefs.NetModelAlgebra.maxBranchingFactor, repeatable = false),
+        maxProperties = SupplierOfRandomness.onDemandInt(pmaxv = NetGraphAlgebraDefs.NetModelAlgebra.maxProperties, repeatable = false),
+        storedValue = SupplierOfRandomness.onDemandReal(repeatable = false)
+      ))
     else List.empty
   def childrenCount: Int = children + childrenObjects.map(_.childrenCount).sum
   def modify: NodeObject =

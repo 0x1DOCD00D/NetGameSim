@@ -1,4 +1,4 @@
 package NetGraphAlgebraDefs
 
 trait NetGraphConnectednessFinalizer:
-  def addInitState(allNodes: Array[NodeObject]): NodeObject
+  def addInitState(allNodes: Vector[NodeObject]): NodeObject

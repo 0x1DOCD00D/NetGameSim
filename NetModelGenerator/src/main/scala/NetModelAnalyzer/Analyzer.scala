@@ -100,46 +100,48 @@ object Analyzer:
 
     logger.info(NetModelAlgebra.getFields.mkString(", ") )
     val winners: ListBuffer[Int] = ListBuffer()
-    val graph: NetGraph = NetModelAlgebra()
-    (1 to numberOfExperiments).foreach {
-      exp =>
-        logger.info(s"=============> Experiment $exp <====================")
-        logger.info(s"Creating target app model for experiment $exp")
-        logger.info("Perturbing target app model for experiment $exp")
-        val tappModel: GraphPerturbationAlgebra#GraphPerturbationTuple = GraphPerturbationAlgebra(graph.copy, true)
+    NetModelAlgebra() match
+      case None => logger.error("Could not create the model")
+      case Some(graph) =>
+        (1 to numberOfExperiments).foreach {
+          exp =>
+            logger.info(s"=============> Experiment $exp <====================")
+            logger.info(s"Creating target app model for experiment $exp")
+            logger.info("Perturbing target app model for experiment $exp")
+            val tappModel: GraphPerturbationAlgebra#GraphPerturbationTuple = GraphPerturbationAlgebra(graph.copy, true)
 
-        val pms: List[GraphPerturbationAlgebra#GraphPerturbationTuple] = (1 to dopplegangers).toList.map(num =>
-          logger.info(s"Perturbing doppleganger app model $num")
-            GraphPerturbationAlgebra(graph.copy)
-        )
-        if pms.exists(_._2.isEmpty) then logger.error("Perturbed models are empty")
-        else
-          logger.info("Successfully created perturbed models")
-          val tappCosts: (COSTTUPLE, DetectedModifiedComponents) = Analyzer(tappModel._1, inverseMR(tappModel._2), NetModelAlgebra.numberOfWalks, "Target")
-          val allCosts: List[(COSTTUPLE, DetectedModifiedComponents)] = pms.zipWithIndex.map {
-            case (pm, index) => Analyzer(pm._1, inverseMR(pm._2), NetModelAlgebra.numberOfWalks, s"Doppleganger_$index")
-          }
-          logger.info(s"Target app costs: ${tappCosts._1}")
-          val listOfCosts: List[COSTTUPLE] = tappCosts._1 :: allCosts.map(_._1)
-          val minCost: Double = listOfCosts.map(_._1.toDouble).min
-          val maxCost: Double = if minCost < 0 then listOfCosts.map(_._1.toDouble).max - minCost else listOfCosts.map(_._1.toDouble).max
-          val removedNegListOfCosts = listOfCosts.map(c => if minCost < 0.0 then (c._1.toDouble - minCost, c._2.toDouble) else (c._1.toDouble, c._2.toDouble))
-          val maxScore: Double = removedNegListOfCosts.map(_._2.toDouble).max
-          val normalizedCosts: List[(Double,Double, Double, Double)] = removedNegListOfCosts.map(c => (c._1.toDouble/maxCost, c._2.toDouble/maxScore, c._1.toDouble, c._2.toDouble))
+            val pms: List[GraphPerturbationAlgebra#GraphPerturbationTuple] = (1 to dopplegangers).toList.map(num =>
+              logger.info(s"Perturbing doppleganger app model $num")
+              GraphPerturbationAlgebra(graph.copy)
+            )
+            if pms.exists(_._2.isEmpty) then logger.error("Perturbed models are empty")
+            else
+              logger.info("Successfully created perturbed models")
+              val tappCosts: (COSTTUPLE, DetectedModifiedComponents) = Analyzer(tappModel._1, inverseMR(tappModel._2), NetModelAlgebra.numberOfWalks, "Target")
+              val allCosts: List[(COSTTUPLE, DetectedModifiedComponents)] = pms.zipWithIndex.map {
+                case (pm, index) => Analyzer(pm._1, inverseMR(pm._2), NetModelAlgebra.numberOfWalks, s"Doppleganger_$index")
+              }
+              logger.info(s"Target app costs: ${tappCosts._1}")
+              val listOfCosts: List[COSTTUPLE] = tappCosts._1 :: allCosts.map(_._1)
+              val minCost: Double = listOfCosts.map(_._1.toDouble).min
+              val maxCost: Double = if minCost < 0 then listOfCosts.map(_._1.toDouble).max - minCost else listOfCosts.map(_._1.toDouble).max
+              val removedNegListOfCosts = listOfCosts.map(c => if minCost < 0.0 then (c._1.toDouble - minCost, c._2.toDouble) else (c._1.toDouble, c._2.toDouble))
+              val maxScore: Double = removedNegListOfCosts.map(_._2.toDouble).max
+              val normalizedCosts: List[(Double, Double, Double, Double)] = removedNegListOfCosts.map(c => (c._1.toDouble / maxCost, c._2.toDouble / maxScore, c._1.toDouble, c._2.toDouble))
 
-          normalizedCosts.zipWithIndex.foreach(
-            (c, index) =>
-              if index == 0 then logger.info(f"Target app costs: ${c._1}%1.3f with the score ${c._2}%1.3f, abs values (${c._3}%1.3f, ${c._4}%1.3f) and its harmonic score ${2 * c._2 * c._1 / (c._2 + c._1)}%1.3f and its geometric score ${scala.math.sqrt(c._2 * c._1)}%1.3f")
-              else logger.info(f"Doppleganger app $index costs: ${c._1}%1.3f with the score ${c._2}%1.3f, abs values (${c._3}%1.3f, ${c._4}%1.3f) and its harmonic score ${2 * c._2 * c._1 / (c._2 + c._1)}%1.3f and its geometric score ${scala.math.sqrt(c._2 * c._1)}%1.3f")
-          )
+              normalizedCosts.zipWithIndex.foreach(
+                (c, index) =>
+                  if index == 0 then logger.info(f"Target app costs: ${c._1}%1.3f with the score ${c._2}%1.3f, abs values (${c._3}%1.3f, ${c._4}%1.3f) and its harmonic score ${2 * c._2 * c._1 / (c._2 + c._1)}%1.3f and its geometric score ${scala.math.sqrt(c._2 * c._1)}%1.3f")
+                  else logger.info(f"Doppleganger app $index costs: ${c._1}%1.3f with the score ${c._2}%1.3f, abs values (${c._3}%1.3f, ${c._4}%1.3f) and its harmonic score ${2 * c._2 * c._1 / (c._2 + c._1)}%1.3f and its geometric score ${scala.math.sqrt(c._2 * c._1)}%1.3f")
+              )
 
-          val appScores: List[(Double, Int)] = normalizedCosts.zipWithIndex.map((c, index)=>(scala.math.sqrt(c._2*c._1), index)).sortBy(_._1)
-          winners += appScores.head._2
-          appScores.foreach(
-            (c,index) =>
-              if index == 0 then logger.info(f"Target app scores $c%1.3f")
-              else logger.info(f"Doppleganger app ${index+1} scores $c%1.3f")
-          )
-          logger.info(f"The winner is app ${appScores.head._2} with the score ${appScores.head._1}%1.3f")
-    }
-    logger.info(s"Winners: ${winners.mkString(", ")}")
+              val appScores: List[(Double, Int)] = normalizedCosts.zipWithIndex.map((c, index) => (scala.math.sqrt(c._2 * c._1), index)).sortBy(_._1)
+              winners += appScores.head._2
+              appScores.foreach(
+                (c, index) =>
+                  if index == 0 then logger.info(f"Target app scores $c%1.3f")
+                  else logger.info(f"Doppleganger app ${index + 1} scores $c%1.3f")
+              )
+              logger.info(f"The winner is app ${appScores.head._2} with the score ${appScores.head._1}%1.3f")
+        }
+        logger.info(s"Winners: ${winners.mkString(", ")}")

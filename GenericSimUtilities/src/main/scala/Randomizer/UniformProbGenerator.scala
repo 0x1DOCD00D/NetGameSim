@@ -21,11 +21,11 @@ class UniformProbGenerator(val seed: Option[Long] = None) extends Randomizer(see
   val logger: Logger = CreateLogger(this.getClass)
   type GeneratedValues = Double | Int
 
-  private def genFunc[T <: AnyVal](quantity: Int, gf: T=>T=>T, minv:Option[T] = None, maxv:Option[T]=None): List[T] =
-    if quantity == 1 then List(if minv.isEmpty || maxv.isEmpty then gf(0d.asInstanceOf[T])(0d.asInstanceOf[T]) else gf(minv.get)(maxv.get))
-    else (1 to quantity).toList.par.map(_ => if minv.isEmpty || maxv.isEmpty then gf(0d.asInstanceOf[T])(0d.asInstanceOf[T]) else gf(minv.get)(maxv.get)).toList
+  private def genFunc[T <: AnyVal](quantity: Long, gf: T=>T=>T, minv:Option[T] = None, maxv:Option[T]=None): Vector[T] =
+    if quantity == 1 then Vector(if minv.isEmpty || maxv.isEmpty then gf(0d.asInstanceOf[T])(0d.asInstanceOf[T]) else gf(minv.get)(maxv.get))
+    else 1L.to(quantity).par.map(_ => if minv.isEmpty || maxv.isEmpty then gf(0d.asInstanceOf[T])(0d.asInstanceOf[T]) else gf(minv.get)(maxv.get)).toVector
 
-  private def generateUniformProbabilities(howMany:Int, repeatable: Boolean = true): List[Double] =
+  private def generateUniformProbabilities(howMany:Long, repeatable: Boolean = true): Vector[Double] =
     if repeatable then
       synchronized {
         genFunc[Double](howMany, (i:Double)=>(j:Double)=>generator.nextDouble(), None, None)
@@ -33,7 +33,7 @@ class UniformProbGenerator(val seed: Option[Long] = None) extends Randomizer(see
     else genFunc[Double](howMany, (i:Double)=>(j:Double)=>ThreadLocalRandom.current().nextDouble(), None, None)
   end generateUniformProbabilities
 
-  private def generateInts(howMany:Int, repeatable: Boolean = true, minv:Int = 0, maxv:Int = Int.MaxValue): List[Int] =
+  private def generateInts(howMany:Long, repeatable: Boolean = true, minv:Int = 0, maxv:Int = Int.MaxValue): Vector[Int] =
     if repeatable then
       synchronized {
         genFunc[Int](howMany,
@@ -46,10 +46,10 @@ class UniformProbGenerator(val seed: Option[Long] = None) extends Randomizer(see
         Some(minv), Some(maxv))
   end generateInts
 
-  private def uniformOrInts(howMany:Int, intsOrDouble: Boolean, repeatable: Boolean = true)(minv:Int = 0, maxv:Int = Int.MaxValue): List[GeneratedValues] =
+  private def uniformOrInts(howMany:Long, intsOrDouble: Boolean, repeatable: Boolean = true)(minv:Int = 0, maxv:Int = Int.MaxValue): Vector[GeneratedValues] =
     if howMany <= 0 then
       logger.error(s"Cannot generate $howMany values")
-      List()
+      Vector()
     else
       if intsOrDouble then generateInts(howMany,repeatable,minv,maxv) else generateUniformProbabilities(howMany,repeatable)
 
@@ -68,12 +68,11 @@ object UniformProbGenerator:
       logger.error(s"Failed to create a random value generator: ${fail.getMessage}")
       None
   }
-  def generateRandom(howMany: Int, generateIntsYesOrNo: Boolean, repeatable: Boolean = true)(minv:Int = 0, maxv:Int = Int.MaxValue): List[Double|Int] =
+  def generateRandom(howMany: Long, generateIntsYesOrNo: Boolean, repeatable: Boolean = true)(minv:Int = 0, maxv:Int = Int.MaxValue): Vector[Double|Int] =
     gen match
       case Some(g) =>
         val res = g.uniformOrInts(howMany, generateIntsYesOrNo, repeatable)(minv, maxv)
-        logger.debug(s"Generated $howMany ${if generateIntsYesOrNo then "integers" else "doubles"}: $res repeatable = $repeatable with minv = $minv and maxv = $maxv")
-        if generateIntsYesOrNo then res.asInstanceOf[List[Int]] else res.asInstanceOf[List[Double]]
+        if generateIntsYesOrNo then res.asInstanceOf[Vector[Int]] else res.asInstanceOf[Vector[Double]]
       case None =>
         logger.error("Random generator not initialized: creating a new one with default values")
-        List()
+        Vector()

@@ -43,10 +43,14 @@ object Main:
     config.getConfig("NGSimulator").entrySet().forEach(e => logger.info(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
     logger.info("for the NetModel entry")
     config.getConfig("NGSimulator").getConfig("NetModel").entrySet().forEach(e => logger.info(s"key: ${e.getKey} value: ${e.getValue.unwrapped()}"))
-    val graph: NetGraph = NetModelAlgebra()
+    NetModelAlgebra() match
+      case None => logger.error("Failed to create NetModelAlgebra")
+      case Some(graph) =>
 //    val cover = Analyzer(graph)
-    graph.persist(fileName = "NetGraph.ser")
-    NetGraph.load(  fileName = "NetGraph.ser") match
-      case Some(graph1) => if graph1 == graph then logger.info("Graphs are equal") else logger.info("Graphs are not equal")
-      case None => logger.error("Failed to load the graph")
-    graph.toDotVizFormat(name = s"Net Graph with ${graph.totalNodes} nodes", dir = outputDirectory, fileName = "GraphViz", outputImageFormat = Format.PNG)
+        graph.persist(fileName = "NetGraph.ser")
+        NetGraph.load(  fileName = "NetGraph.ser") match
+          case Some(graph1) => if graph1 == graph then logger.info("Graphs are equal") else logger.info("Graphs are not equal")
+          case None => logger.error("Failed to load the graph")
+        logger.info(s"Generating DOT file for graph with ${graph.totalNodes} nodes for visualization")
+        graph.toDotVizFormat(name = s"Net Graph with ${graph.totalNodes} nodes", dir = outputDirectory, fileName = "GraphViz", outputImageFormat = Format.PNG)
+        logger.info(s"Generating DOT file nodes for visualization. Exiting...")

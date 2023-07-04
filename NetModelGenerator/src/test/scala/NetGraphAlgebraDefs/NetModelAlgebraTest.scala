@@ -24,7 +24,7 @@ class NetModelAlgebraTest extends AnyFlatSpec with Matchers with MockitoSugar {
   }
 
   it should "create a small net graph" in {
-    val graph: NetGraph = NetModelAlgebra()
+    val graph: NetGraph = NetModelAlgebra().get
 
     val am = graph.adjacencyMatrix
     logger.info("\n" + graph.toCsv(am))
