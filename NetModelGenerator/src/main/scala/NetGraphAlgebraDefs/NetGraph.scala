@@ -46,7 +46,7 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
 
         val nodesLength = orphanNodes.size
         val totalCombinationsOfNodes = nodesLength * nodesLength
-        val nodes2AddEdges: ParSeq[(Int, Int)] = SupplierOfRandomness.randProbs(totalCombinationsOfNodes).par.map(_ < edgeProbability).zipWithIndex.filter(_._1 == true).map(v => (v._2 / nodesLength, v._2 % nodesLength))
+        val nodes2AddEdges: ParSeq[(Int, Int)] = SupplierOfRandomness.randProbs(totalCombinationsOfNodes)().par.map(_ < edgeProbability).zipWithIndex.filter(_._1 == true).map(v => (v._2 / nodesLength, v._2 % nodesLength))
         nodes2AddEdges.seq.foreach {
           case (from, to) =>
             if from != to then
@@ -93,7 +93,7 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
     val successors: Array[NodeObject] = sm.successors(from).asScala.toArray
     if successors.isEmpty then None
     else
-      val randomSuccessor: NodeObject = successors(SupplierOfRandomness.onDemand(maxv = successors.length))
+      val randomSuccessor: NodeObject = successors(SupplierOfRandomness.onDemandInt(pmaxv = successors.length))
       val edge: Action = sm.edgeValue(from, randomSuccessor).get
       Some((randomSuccessor, edge))
 

@@ -16,7 +16,7 @@ class NetObjectTest extends AnyFlatSpec with Matchers with MockitoSugar {
 
   it should "test a mock" in {
     val mockRandomizer = mock[SupplierOfRandomness.type ]
-    when(mockRandomizer.onDemand()).thenReturn(1)
-    mockRandomizer.onDemand() shouldBe 1
+    when(mockRandomizer.onDemandInt()).thenReturn(1)
+    mockRandomizer.onDemandInt() shouldBe 1
   }
 }

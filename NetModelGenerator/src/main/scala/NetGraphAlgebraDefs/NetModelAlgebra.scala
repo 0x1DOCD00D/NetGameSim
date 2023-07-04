@@ -9,6 +9,7 @@ import com.google.common.graph.*
 import org.slf4j.Logger
 
 import java.io.File
+import scala.annotation.tailrec
 import scala.collection.immutable.TreeSeqMap.OrderBy
 import scala.collection.mutable
 import scala.jdk.CollectionConverters.*
@@ -34,12 +35,21 @@ class NetModel extends NetGraphConnectednessFinalizer:
   val modelUUID:String = java.util.UUID.randomUUID.toString
 
   private def createNodes(): Unit =
+    logger.info(s"Random value ${SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor,repeatable = false)}")
     val allNodes: ParSeq[NodeObject] = (1 to statesTotal).par.map { id =>
-      NodeObject(id, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
-        SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
-        maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
-        maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties), SupplierOfRandomness.randProbs(1).head
+      logger.info(s"Creating node with id $id")
+      val n = NodeObject(
+        id = id,
+        children = SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor,repeatable = false),
+        props = SupplierOfRandomness.onDemandInt(pmaxv = maxProperties, repeatable = false),
+        propValueRange = SupplierOfRandomness.onDemandInt(pmaxv = propValueRange, repeatable = false),
+        maxDepth = SupplierOfRandomness.onDemandInt(pmaxv = maxDepth, repeatable = false),
+        maxBranchingFactor = SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor, repeatable = false),
+        maxProperties = SupplierOfRandomness.onDemandInt(pmaxv = maxProperties, repeatable = false),
+        storedValue = SupplierOfRandomness.onDemandReal(repeatable = false)
       )
+      logger.info(s"Created node with id $id")
+      n
     }
     logger.info(s"Inserting ${allNodes.size} created nodes into the graph")
     allNodes.toList.foreach( node => if !stateMachine.addNode(node) then logger.error(s"Could not add node with id ${node.id}") else ())
@@ -74,6 +84,13 @@ class NetModel extends NetGraphConnectednessFinalizer:
     else None
   end generateModel
 
+  def reportProgress(msg: String, total: Int, updateInterval: Int)(progress: Int = 0): Unit =
+    if progress >= total then
+      logger.info(s"$msg: 100%")
+    else if progress % updateInterval == 0 then
+      logger.info(s"$msg: ${progress * 100 / total}%")
+    ()
+  end reportProgress
   def generateModel(forceReachability: Boolean = false): NetGraph =
     logger.info(s"Generating a random graph with $statesTotal nodes and ${if forceReachability then s"ensuring ${desiredReachabilityCoverage*100}%" else "random"} reachability")
     createNodes()
@@ -81,22 +98,25 @@ class NetModel extends NetGraphConnectednessFinalizer:
     val allNodes: Array[NodeObject] = stateMachine.nodes().asScala.toArray
     val nodesLength = allNodes.length
     val totalCombinationsOfNodes = nodesLength * nodesLength
-    val nodes4Edges: ParSeq[(Int, Int)] = SupplierOfRandomness.randProbs(totalCombinationsOfNodes).par.map(_ < edgeProbability).zipWithIndex.filter(_._1 == true).map(v => (v._2 / nodesLength, v._2 % nodesLength))
+    val nodes4Edges: ParSeq[(Int, Int)] = SupplierOfRandomness.randProbs(totalCombinationsOfNodes)().par.map(_ < edgeProbability).zipWithIndex.filter(_._1 == true).map(v => (v._2 / nodesLength, v._2 % nodesLength))
     logger.info(s"Ready to generate ${nodes4Edges.length} edge candidates")
-    val edges2Add:ParSeq[Action] = nodes4Edges.flatMap {
-      case (from, to) =>
-        if from == to then ParSeq()
+//    val rp = reportProgress("Generated edges", nodes4Edges.length, nodes4Edges.length/1000) _
+//    val edges2Add:ParSeq[Action] = nodes4Edges.par.zipWithIndex.map {
+    val edges2Add:List[Action] = nodes4Edges.seq.toList.zipWithIndex.flatMap {
+      case ((from, to), count) =>
+        if from == to then None
         else
-//          node numbering starts from 1, since 0 is reserved for the init node
+          //          node numbering starts from 1, since 0 is reserved for the init node
           val nodeFrom = allNodes(from)
-          if nodeFrom.id-1 != from then logger.error(s"Node from with id ${nodeFrom.id} has index $from")
+          if nodeFrom.id - 1 != from then logger.error(s"Node from with id ${nodeFrom.id} has index $from")
           val nodeTo = allNodes(to)
-          if nodeTo.id-1 != to then logger.error(s"Node to with id ${nodeTo.id} has index $to")
-          List(createAction(nodeFrom, nodeTo))
-    }
+          if nodeTo.id - 1 != to then logger.error(s"Node to with id ${nodeTo.id} has index $to")
+          logger.info(s"Generating edges $count out of ${nodes4Edges.length}")
+          Some(createAction(nodeFrom, nodeTo))
+}
     logger.info(s"Generated ${nodes4Edges.length} edge candidates out of $totalCombinationsOfNodes possible combinations")
-    val tenPercent = (nodes4Edges.length * 0.1).toInt
-    edges2Add.seq.zipWithIndex.foreach {
+    val tenPercent = (nodes4Edges.length * 0.5).toInt
+    edges2Add.zipWithIndex.foreach {
       (edge, index) =>
         if index % tenPercent == 0 then logger.info(s"Inserted $index edges into the graph out of ${nodes4Edges.length}")
         logger.debug(s"Adding an edge from ${edge.fromNode.id} to ${edge.toNode.id}")
@@ -112,10 +132,10 @@ class NetModel extends NetGraphConnectednessFinalizer:
 
   def addInitState(allNodes: Array[NodeObject]): NodeObject =
     val maxOutdegree = stateMachine.nodes().asScala.map(node => stateMachine.outDegree(node)).max
-    val newInitNode: NodeObject = NodeObject(0, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
-      SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
-      maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
-      maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties), SupplierOfRandomness.randProbs(1).head
+    val newInitNode: NodeObject = NodeObject(0, SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor),
+      SupplierOfRandomness.onDemandInt(pmaxv = maxProperties), propValueRange = SupplierOfRandomness.onDemandInt(pmaxv = propValueRange),
+      maxDepth = SupplierOfRandomness.onDemandInt(pmaxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor),
+      maxProperties = SupplierOfRandomness.onDemandInt(pmaxv = maxProperties), SupplierOfRandomness.onDemandReal()
     )
     stateMachine.addNode(newInitNode)
     allNodes.sortBy(node => (stateMachine.outDegree(node), stateMachine.inDegree(node)))( Ordering.Tuple2(Ordering.Int.reverse, Ordering.Int)).take(connectedness).foreach {
@@ -184,18 +204,16 @@ object NetModelAlgebra:
   def createAction(from: NodeObject, to: NodeObject): Action =
     val fCount = from.childrenCount
     val tCount = to.childrenCount
-    val cost: Double = SupplierOfRandomness.randProbs(1).head
+    val cost: Double = SupplierOfRandomness.randProbs(1)().head
     require(cost >= 0 && cost <= 1)
-
-    Action(SupplierOfRandomness.onDemand(maxv = actionRange),
+    Action(2,
       from,
       to,
-      if fCount > 0 then SupplierOfRandomness.onDemand(maxv = fCount) else 0,
-      if tCount > 0 then SupplierOfRandomness.onDemand(maxv = tCount) else 0,
-      if SupplierOfRandomness.onDemand() % 2 == 0 then None else Some(SupplierOfRandomness.onDemand(maxv = propValueRange)),
-      cost
+      if fCount > 0 then SupplierOfRandomness.onDemandInt(pmaxv = fCount, repeatable = false) else 0,
+      if tCount > 0 then SupplierOfRandomness.onDemandInt(pmaxv = tCount, repeatable = false) else 0,
+      if SupplierOfRandomness.onDemandInt(repeatable = false) % 2 == 0 then None else Some(SupplierOfRandomness.onDemandInt(pmaxv = propValueRange, repeatable = false)),
+      0.2
     )
-
   //  each node of the graph is a NodeObject that corresponds to a GUI screen, which is a tree of GuiObjects
   @main def runNetModelAlgebra(args: String*): Unit =
     logger.info("File NetModelGenerator/src/main/scala/NetGraph/NetModelAlgebra.scala created at time 5:42 PM")

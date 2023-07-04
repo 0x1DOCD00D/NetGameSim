@@ -42,7 +42,7 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
         logger.error(s"No nodes exist beyond the distance threshold of $minDistance2ApplyPerturbation")
         (newModel, Vector())
       else
-        val probs = SupplierOfRandomness.randProbs(nodesToApplyPerturbation.length).map(_ < (if dissimulate then dissimulationCoefficient else perturbationCoeff))
+        val probs = SupplierOfRandomness.randProbs(nodesToApplyPerturbation.length)().map(_ < (if dissimulate then dissimulationCoefficient else perturbationCoeff))
         val yesOrNo: Iterator[Boolean] = probs.iterator
         logger.info(s"Out of the ${nodesToApplyPerturbation.size} nodes, perturbations will be applied to ${probs.count(_ == true)} nodes")
         (newModel,
@@ -52,7 +52,7 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
     end if
 
   private def perturbNode(node: NodeObject, dissimulate: Boolean = false): ModificationRecord =
-    val op2do: ACTIONS = ACTIONS.fromOrdinal(SupplierOfRandomness.onDemand(maxv = ACTIONS.values.map(_.ordinal).toList.max))
+    val op2do: ACTIONS = ACTIONS.fromOrdinal(SupplierOfRandomness.onDemandInt(repeatable=true, pmaxv = ACTIONS.values.map(_.ordinal).toList.max, pminv = 0))
     if dissimulate then
       logger.debug(s"Dissimulating node $node for the target app")
       modifyNode(node)
@@ -89,10 +89,10 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
       Vector()
 
   private def addNode(node: NodeObject): ModificationRecord =
-    val newNode: NodeObject = NodeObject(newModel.sm.nodes().asScala.map(_.id).max + 1, SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
-      SupplierOfRandomness.onDemand(maxv = maxProperties), propValueRange = SupplierOfRandomness.onDemand(maxv = propValueRange),
-      maxDepth = SupplierOfRandomness.onDemand(maxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemand(maxv = maxBranchingFactor),
-      maxProperties = SupplierOfRandomness.onDemand(maxv = maxProperties), SupplierOfRandomness.randProbs(1).head)
+    val newNode: NodeObject = NodeObject(newModel.sm.nodes().asScala.map(_.id).max + 1, SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor),
+      SupplierOfRandomness.onDemandInt(pmaxv = maxProperties), propValueRange = SupplierOfRandomness.onDemandInt(pmaxv = propValueRange),
+      maxDepth = SupplierOfRandomness.onDemandInt(pmaxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor),
+      maxProperties = SupplierOfRandomness.onDemandInt(pmaxv = maxProperties), SupplierOfRandomness.onDemandReal(true))
     val newEdge: Action = NetModelAlgebra.createAction(node, newNode)
     if newModel.sm.addNode(newNode) then
       Try(newModel.sm.putEdgeValue(node, newNode, newEdge)) match
@@ -125,7 +125,7 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
         val chosenNode: NodeObject = foundNodes.head
         op(node, chosenNode)
       else
-        val chosenNode: NodeObject = foundNodes(SupplierOfRandomness.onDemand(maxv = foundNodes.length))
+        val chosenNode: NodeObject = foundNodes(SupplierOfRandomness.onDemandInt(pmaxv = foundNodes.length))
         op(node, chosenNode)
     else Vector()
 

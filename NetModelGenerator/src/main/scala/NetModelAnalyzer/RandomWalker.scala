@@ -44,7 +44,7 @@ class RandomWalker(private val gg: NetGraph, private val condition: TerminationP
   }
 //  this function makes one step of the random walk where the state is the current node and the path is the list of steps
   private def makeOneStep(path: PATHRESULT): WALKSTATE = State { state =>
-    if path.nonEmpty && SupplierOfRandomness.`YesOrNo?`(graphWalkNodeTerminationProbability) then (state, (TerminalNode, TerminalAction)::path)
+    if path.nonEmpty && SupplierOfRandomness.`YesOrNo?`(graphWalkNodeTerminationProbability)() then (state, (TerminalNode, TerminalAction)::path)
     else if path.nonEmpty && path.headOption.get._1 == TerminalNode then (state, path)
     else step(state) match {
       case Some((node:NodeObject, action:Action)) =>

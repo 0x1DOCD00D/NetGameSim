@@ -67,7 +67,7 @@ object CostRewardCalculator extends CostRewardFunction:
       val (newCost:COSTTUPLE, dc:DetectedModifiedComponents) = computeCosts4Walk(v1, costs, v3)
       if math.abs(newCost._2.toDouble - costs._2.toDouble) > NGSConstants.EPSILON then
         logger.debug(s"Malappbudget: ${newCost._1} changed from ${costs._1}, tapp score: ${newCost._2} changed from ${costs._2}, detected ${dc.size} changed components")
-      ((if SupplierOfRandomness.`YesOrNo?`(serviceRewardProbability) then newCost._1.reward(avgWeight) else newCost._1.penalty(avgWeight), newCost._2), dc)
+      ((if SupplierOfRandomness.`YesOrNo?`(serviceRewardProbability)(true) then newCost._1.reward(avgWeight) else newCost._1.penalty(avgWeight), newCost._2), dc)
     }
   end apply
 
