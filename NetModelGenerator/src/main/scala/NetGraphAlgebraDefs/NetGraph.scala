@@ -3,7 +3,7 @@ package NetGraphAlgebraDefs
 import NetGraphAlgebraDefs.NetModelAlgebra.{createAction, desiredReachabilityCoverage, edgeProbability, outputDirectory}
 import Randomizer.SupplierOfRandomness
 import Utilz.{CreateLogger, NGSConstants}
-import com.google.common.graph.{Graphs, MutableValueGraph, ValueGraphBuilder}
+import com.google.common.graph.{EndpointPair, Graphs, MutableValueGraph, ValueGraphBuilder}
 import org.apache.commons.io.FileUtils
 import org.slf4j.Logger
 import sun.nio.cs.UTF_8
@@ -20,8 +20,40 @@ import scala.util.{Failure, Success, Try, Using}
 import scala.collection.parallel.*
 import scala.collection.parallel.CollectionConverters.*
 
-case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphStore:
+case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphStore with Ordered[NetGraph]:
   import NetGraph.logger
+
+  override def compare(that: NetGraph): Int =
+    import scala.collection.parallel.*
+    import scala.collection.parallel.CollectionConverters.*
+
+    val thisNodes: ParSeq[NodeObject] = sm.nodes().asScala.toList.par
+    val thatNodes: ParSeq[NodeObject] = that.sm.nodes().asScala.toList.par
+    val thisEdges: List[EndpointPair[NodeObject]] = sm.edges().asScala.toList
+    val thatEdges: List[EndpointPair[NodeObject]] = that.sm.edges().asScala.toList
+
+    thisNodes.foldLeft(0) {
+      case (acc, node) => if thatNodes.exists(_ == node) then acc else
+        logger.error(s"Node ${node.id} is not in the other graph")
+        acc + 1
+    } + thatNodes.foldLeft(0) {
+      case (acc, node) => if thisNodes.exists(_ == node) then acc else
+        logger.error(s"Node ${node.id} is not in the other graph")
+        acc + 1
+    } + thisEdges.foldLeft(0){ case (acc, e) =>
+      if e.nodeU() == thatEdges.find(n => n == e).get.nodeU() &&
+        e.nodeV() == thatEdges.find(n => n == e).get.nodeV()
+      then acc else
+        logger.error(s"Edge ${e.nodeU().id} -> ${e.nodeV().id} is not in the other graph")
+        acc+1
+    } + thatEdges.foldLeft(0){ case (acc, e) =>
+      if e.nodeU() == thisEdges.find(n => n == e).get.nodeU() &&
+        e.nodeV() == thisEdges.find(n => n == e).get.nodeV()
+      then acc else
+        logger.error(s"Edge ${e.nodeU().id} -> ${e.nodeV().id} is not in the other graph")
+        acc+1
+    }
+  end compare
 
   def copy: NetGraph = NetGraph(Graphs.copyOf(sm), initState)
 

@@ -53,6 +53,8 @@ object NGSConstants:
   val MAXPROPERTIESDEFAULT = 20
   val PROPVALUERANGE = "propValueRange"
   val PROPVALUERANGEDEFAULT = 100
+  val ACTIONTYPE = "actionType"
+  val ACTIONTYPEDEFAULT = 10
   val ACTIONRANGE = "actionRange"
   val ACTIONRANGEDEFAULT = 10
   val CONNECTEDNESS = "connectedness"

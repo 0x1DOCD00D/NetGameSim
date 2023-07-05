@@ -28,16 +28,17 @@ object Analyzer:
     import org.jgrapht.graph.*
     import org.jgrapht.graph.guava.*
 
-    val jg: Graph[NodeObject, Action] = (new MutableValueGraphAdapter(g.sm, createAction(g.initState,g.initState), (x: Action) => x.cost)).asInstanceOf[Graph[NodeObject, Action]]
+    val gc = g.copy
+    val jg: Graph[NodeObject, Action] = new MutableValueGraphAdapter(gc.sm, createAction(gc.initState,gc.initState), (x: Action) => x.cost).asInstanceOf[Graph[NodeObject, Action]]
     val inspector = new KosarajuStrongConnectivityInspector(jg)
     val components = inspector.stronglyConnectedSets().asScala.toList.filter(_.size > 1)
     logger.info(s"Detected ${components.map(_.size)} cycles")
 
     val newg = g.copy
-    newg.sm.removeNode(g.sm.nodes().asScala.find(_.id == 3).get)
-    val jg1: Graph[NodeObject, Action] = (new MutableValueGraphAdapter(newg.sm, createAction(newg.initState,newg.initState), (x: Action) => x.cost)).asInstanceOf[Graph[NodeObject, Action]]
+    newg.sm.removeNode(newg.sm.nodes().asScala.find(_.id == 3).get)
+    val jg1: Graph[NodeObject, Action] = new MutableValueGraphAdapter(newg.sm, createAction(newg.initState,newg.initState), (x: Action) => x.cost).asInstanceOf[Graph[NodeObject, Action]]
     val vf2: VF2SubgraphIsomorphismInspector[NodeObject, Action] = new VF2SubgraphIsomorphismInspector(jg, jg1)
-    val isomorphisms = vf2.getMappings().asScala.toList
+    val isomorphisms = vf2.getMappings.asScala.toList
     logger.info(s"Detected ${isomorphisms.size} isomorphic mappings")
     isomorphisms.foreach(m => logger.info(s"Isomorphism: $m"))
     components.map(s =>s.asScala.toSet)

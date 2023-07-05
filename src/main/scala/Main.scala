@@ -46,11 +46,14 @@ object Main:
     NetModelAlgebra() match
       case None => logger.error("Failed to create NetModelAlgebra")
       case Some(graph) =>
-//        val algres = Analyzer(graph)
-//        algres.foreach(e => logger.info(e.mkString(", ")))
+        val algres = Analyzer(graph)
+        algres.foreach(e => logger.info(e.mkString(", ")))
         graph.persist(fileName = "NetGraph.ser")
         NetGraph.load(  fileName = "NetGraph.ser") match
-          case Some(graph1) => if graph1 == graph then logger.info("Graphs are equal") else logger.info("Graphs are not equal")
+          case Some(graph1) =>
+            val diff = graph.compare(graph1)
+            if diff == 0 then logger.info("Graphs are equal")
+            else logger.error(s"Graphs are not equal, $diff differences found")
           case None => logger.error("Failed to load the graph")
         logger.info(s"Generating DOT file for graph with ${graph.totalNodes} nodes for visualization")
         graph.toDotVizFormat(name = s"Net Graph with ${graph.totalNodes} nodes", dir = outputDirectory, fileName = "GraphViz", outputImageFormat = Format.PNG)
