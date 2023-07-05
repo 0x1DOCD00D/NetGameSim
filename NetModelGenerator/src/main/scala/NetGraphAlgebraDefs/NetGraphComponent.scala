@@ -8,7 +8,7 @@ import scala.collection.parallel.CollectionConverters.*
 trait NetGraphComponent
 
 case class NodeObject(id: Int, children: Int, props: Int, currentDepth: Int = 1, propValueRange:Int, maxDepth:Int, maxBranchingFactor:Int, maxProperties:Int, storedValue: Double) extends NetGraphComponent:
-  val properties: List[Int] = 1.to(props).par.map(_=>SupplierOfRandomness.onDemandInt(pmaxv = propValueRange, repeatable = false)).toList
+  val properties: List[Int] = 1.to(props).par.map(_=>SupplierOfRandomness.onDemandInt(pmaxv = NetGraphAlgebraDefs.NetModelAlgebra.propValueRange, repeatable = false)).toList
   val childrenObjects: List[NodeObject] =
     if currentDepth <= maxDepth then
       List.tabulate(children)(cid => NodeObject(cid+id+1,

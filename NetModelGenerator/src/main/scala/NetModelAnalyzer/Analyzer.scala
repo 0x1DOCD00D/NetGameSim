@@ -13,7 +13,9 @@ import NetGraphAlgebraDefs.{Action, GraphPerturbationAlgebra, NetGraph, NetGraph
 import NetGraphAlgebraDefs.GraphPerturbationAlgebra.{ModificationRecord, ModificationRecordInverse, inverseMR}
 import NetModelAnalyzer.Budget.{MalAppBudget, TargetAppScore}
 import com.google.common.graph.{EndpointPair, MutableValueGraph}
+import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector
 import org.jgrapht.alg.interfaces.VertexCoverAlgorithm
+import org.jgrapht.alg.isomorphism.{VF2GraphIsomorphismInspector, VF2SubgraphIsomorphismInspector}
 import org.jgrapht.alg.vertexcover.RecursiveExactVCImpl
 
 import scala.annotation.tailrec
@@ -21,15 +23,25 @@ import scala.collection.mutable.ListBuffer
 import scala.jdk.CollectionConverters.*
 
 object Analyzer:
-  def apply(g: NetGraph): List[Int] =
+  def apply(g: NetGraph): List[Set[NodeObject]] =
     import org.jgrapht.*
     import org.jgrapht.graph.*
     import org.jgrapht.graph.guava.*
 
-    val jg: MutableValueGraphAdapter[NodeObject, Action] = new MutableValueGraphAdapter(g.sm, createAction(g.initState,g.initState), (x: Action) => x.cost)
-    val alg: VertexCoverAlgorithm[NodeObject] = new RecursiveExactVCImpl(jg)
-    val cover: VertexCoverAlgorithm.VertexCover[NodeObject] = alg.getVertexCover()
-    cover.asScala.toList.map(_.id)
+    val jg: Graph[NodeObject, Action] = (new MutableValueGraphAdapter(g.sm, createAction(g.initState,g.initState), (x: Action) => x.cost)).asInstanceOf[Graph[NodeObject, Action]]
+    val inspector = new KosarajuStrongConnectivityInspector(jg)
+    val components = inspector.stronglyConnectedSets().asScala.toList.filter(_.size > 1)
+    logger.info(s"Detected ${components.map(_.size)} cycles")
+
+    val newg = g.copy
+    newg.sm.removeNode(g.sm.nodes().asScala.find(_.id == 3).get)
+    val jg1: Graph[NodeObject, Action] = (new MutableValueGraphAdapter(newg.sm, createAction(newg.initState,newg.initState), (x: Action) => x.cost)).asInstanceOf[Graph[NodeObject, Action]]
+    val vf2: VF2SubgraphIsomorphismInspector[NodeObject, Action] = new VF2SubgraphIsomorphismInspector(jg, jg1)
+    val isomorphisms = vf2.getMappings().asScala.toList
+    logger.info(s"Detected ${isomorphisms.size} isomorphic mappings")
+    isomorphisms.foreach(m => logger.info(s"Isomorphism: $m"))
+    components.map(s =>s.asScala.toSet)
+
 
   def apply(graph: NetGraph, mr: ModificationRecordInverse, numberOfWalks:Int, appName: String): (COSTTUPLE, DetectedModifiedComponents) =
     @tailrec def computeTotalCostsRewards(allWalks: List[PATHRESULT], cr: COSTTUPLE, dc: DetectedModifiedComponents): (COSTTUPLE, DetectedModifiedComponents) =

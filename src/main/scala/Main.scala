@@ -46,7 +46,8 @@ object Main:
     NetModelAlgebra() match
       case None => logger.error("Failed to create NetModelAlgebra")
       case Some(graph) =>
-//    val cover = Analyzer(graph)
+//        val algres = Analyzer(graph)
+//        algres.foreach(e => logger.info(e.mkString(", ")))
         graph.persist(fileName = "NetGraph.ser")
         NetGraph.load(  fileName = "NetGraph.ser") match
           case Some(graph1) => if graph1 == graph then logger.info("Graphs are equal") else logger.info("Graphs are not equal")

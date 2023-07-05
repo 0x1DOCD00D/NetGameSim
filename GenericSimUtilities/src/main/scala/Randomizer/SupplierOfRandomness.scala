@@ -17,7 +17,8 @@ object SupplierOfRandomness:
     UniformProbGenerator.generateRandom(1, false, repeatable)().asInstanceOf[Vector[Double]].head < thresholdProb
 
   def onDemandInt(repeatable:Boolean = true, pminv:Int = 0, pmaxv:Int = Int.MaxValue): Int =
-    if pminv < 0 || pmaxv < 0 || pminv >= pmaxv then logger.error(s"ondemand is called with incorrect parameters: pminv=$pminv, pmaxv=$pmaxv")
+    if pminv < 0 || pmaxv < 0 || pminv >= pmaxv then 
+      logger.error(s"ondemand is called with incorrect parameters: pminv=$pminv, pmaxv=$pmaxv")
     val minv = if pminv < 0 then math.abs(pminv) else pminv
     val maxv = if pmaxv < 0 then math.abs(pmaxv) else pmaxv
     val genValue: Option[Int] = if minv < maxv then UniformProbGenerator.generateRandom(1, true, repeatable)(minv, maxv).asInstanceOf[Vector[Int]].headOption
