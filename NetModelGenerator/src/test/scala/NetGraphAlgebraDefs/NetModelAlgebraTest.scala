@@ -18,9 +18,9 @@ class NetModelAlgebraTest extends AnyFlatSpec with Matchers with MockitoSugar {
   it should "test a mock" in {
     import Utilz.ConfigReader
     val crMock = mock[NetModel]
-    when(crMock.generateModel()).thenReturn(NetGraph(null,null))
+    when(crMock.generateModel()).thenReturn(Option(NetGraph(null,null)))
     val graph = crMock.generateModel()
-    graph shouldBe NetGraph(null,null)
+    graph shouldBe Option(NetGraph(null,null))
   }
 
   it should "create a small net graph" in {
