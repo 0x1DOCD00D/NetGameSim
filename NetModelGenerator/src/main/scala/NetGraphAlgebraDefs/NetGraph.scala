@@ -62,6 +62,7 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
   def totalNodes: Int = sm.nodes().asScala.count(_ => true)
 
   @tailrec final def forceReachability: Set[NodeObject] =
+    import scala.jdk.CollectionConverters.*
     val orphanNodes: List[NodeObject] = unreachableNodes()._1.toList
     logger.info(s"Force reachability: there are ${orphanNodes.size} orphan nodes in the graph")
     if orphanNodes.size <= 0 then Set.empty
@@ -85,10 +86,10 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
               val nodeFrom = orphanNodes(from)
               val nodeTo = orphanNodes(to)
               if nodeTo != nodeFrom then
-                if sm.edgeValue(nodeFrom, nodeTo).isEmpty then
+                if !sm.edgeValue(nodeFrom, nodeTo).isPresent then
                   logger.debug(s"Adding an edge from orphan ${nodeFrom.id} to orphan ${nodeTo.id}")
                   sm.putEdgeValue(nodeFrom, nodeTo, createAction(nodeFrom, nodeTo))
-                else if sm.edgeValue(nodeTo, nodeFrom).isEmpty then
+                else if !sm.edgeValue(nodeTo, nodeFrom).isPresent then
                   logger.debug(s"Adding an edge from orphan ${nodeTo.id} to orphan ${nodeFrom.id}")
                   sm.putEdgeValue(nodeTo, nodeFrom, createAction(nodeTo, nodeFrom))
                 else ()

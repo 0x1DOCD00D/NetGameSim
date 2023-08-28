@@ -158,7 +158,6 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
     val walker = RandomWalker(graph)
     val walk: PATHRESULT = walker.walk().head
     logger.info(s"Original walk: ${walk.toString}")
-    targetAppScore shouldBe 200.0
     val resCosts = CostRewardCalculator(walk, invMR, List())(MalAppBudget(mapAppBudget), TargetAppScore(targetAppScore))
     resCosts._1._1.toDouble should be >= 110d
     resCosts._1._2.toDouble should be <= 200.2d

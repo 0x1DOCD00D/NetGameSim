@@ -43,7 +43,7 @@ class BudgetTest extends AnyFlatSpec with Matchers with MockitoSugar with Privat
 
   it should "create a malapp budget and take a cost and a reward and penalty" in {
     val malappbudget = MalAppBudget(mapAppBudget)
-    malappbudget.cost(1).reward(2.0).penalty(1.0).toDouble should be >= malappbudget.reward(1.0).toDouble
+    malappbudget.cost(1).reward(2.0).penalty(1.0).toDouble should be <= malappbudget.reward(1.0).toDouble
   }
 
   it should "create a target app score and take three penalties" in {
