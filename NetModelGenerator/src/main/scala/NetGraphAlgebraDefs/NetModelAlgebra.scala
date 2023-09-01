@@ -113,10 +113,8 @@ class NetModel extends NetGraphConnectednessFinalizer:
             Some(createAction(nodeFrom, nodeTo))
       }
       logger.info(s"Generated ${nodes4Edges.length} edge candidates out of $totalCombinationsOfNodes possible combinations")
-      val tenPercent = (nodes4Edges.length * 0.5).toInt
       edges2Add.zipWithIndex.foreach {
         (edge, index) =>
-          if index % tenPercent == 0 then logger.info(s"Inserted $index edges into the graph out of ${nodes4Edges.length}")
           logger.debug(s"Adding an edge from ${edge.fromNode.id} to ${edge.toNode.id}")
           stateMachine.putEdgeValue(edge.fromNode, edge.toNode, edge)
       }
