@@ -62,16 +62,4 @@ object Main:
         g.get.toDotVizFormat(name = s"Net Graph with ${g.get.totalNodes} nodes", dir = outputDirectory, fileName = outGraphFileName, outputImageFormat = Format.DOT)
         logger.info(s"A graph image file can be generated using the following command: sfdp -x -Goverlap=scale -Tpng $outputDirectory$outGraphFileName.dot > $outputDirectory$outGraphFileName.png")
       else
-        logger.info("Done!")
-/*
-
-      match
-        case None => logger.error("Failed to create NetModelAlgebra")
-        case Some(graph) =>
-          val algres = Analyzer(graph)
-          algres.foreach(e => logger.info(e.mkString(", ")))
-          graph.persist(fileName = outGraphFileName.concat(".ser"))
-          logger.info(s"Generating DOT file for graph with ${graph.totalNodes} nodes for visualization as $outputDirectory$outGraphFileName.dot")
-          graph.toDotVizFormat(name = s"Net Graph with ${graph.totalNodes} nodes", dir = outputDirectory, fileName = outGraphFileName, outputImageFormat = Format.DOT)
-          logger.info(s"A graph image file can be generated using the following command: sfdp -x -Goverlap=scale -Tpng $outputDirectory$outGraphFileName.dot > $outputDirectory$outGraphFileName.png")
-*/
+        logger.info(s"Done! Please check the content of the output directory $outputDirectory")

@@ -8,7 +8,7 @@
 
 package NetModelAnalyzer
 
-import NetGraphAlgebraDefs.NetModelAlgebra.{createAction, dopplegangers, mapAppBudget, numberOfExperiments, targetAppScore}
+import NetGraphAlgebraDefs.NetModelAlgebra.{createAction, mapAppBudget, numberOfExperiments, targetAppScore}
 import NetGraphAlgebraDefs.{Action, GraphPerturbationAlgebra, NetGraph, NetGraphComponent, NetModelAlgebra, NodeObject}
 import NetGraphAlgebraDefs.GraphPerturbationAlgebra.{ModificationRecord, ModificationRecordInverse, inverseMR}
 import NetModelAnalyzer.Budget.{MalAppBudget, TargetAppScore}
@@ -123,7 +123,7 @@ object Analyzer:
             logger.info("Perturbing target app model for experiment $exp")
             val tappModel: GraphPerturbationAlgebra#GraphPerturbationTuple = GraphPerturbationAlgebra(graph.copy, true)
 
-            val pms: List[GraphPerturbationAlgebra#GraphPerturbationTuple] = (1 to dopplegangers).toList.map(num =>
+            val pms: List[GraphPerturbationAlgebra#GraphPerturbationTuple] = (1 to 10).toList.map(num =>
               logger.info(s"Perturbing doppleganger app model $num")
               GraphPerturbationAlgebra(graph.copy)
             )

@@ -41,7 +41,7 @@ Matching Java Virtual Machines (6):
 ```
 To choose a higher version of the JVM we execute the following command ```export JAVA_HOME=`/usr/libexec/java_home -v 19.0.1` ``` that resolves the issue.
 * Once built you can execute the program using the following command ```java -Xms2G -Xmx30G -jar -DNGSimulator.NetModel.statesTotal=300  target/scala-3.2.2/netmodelsim.jar fileName``` where you can modify the memory allocation values for the command line arguments Xms and Xmx. 
-* If ```fileName``` is omitted from the command line then the default name ```NetGraph``` will be used;
+* If ```fileName``` is omitted from the command line then the default name ```NetGraph_<time stamp>.ngs``` will be used;
 * Configuration options in ```application.conf``` can be overwritten using the command line as it is shown with the option ```-D``` applied to the configuration option ```NGSimulator.NetModel.statesTotal```.
 
 Running NetGameSim results in many log messages showing the progress of the execution and hopefully, if no error messages are shown then the last log entries can look like the following.
