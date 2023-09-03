@@ -120,6 +120,14 @@ A typical accept/reject algorithm for simulation is based on the following simpl
 * The parameter ***graphWalkNodeTerminationProbability*** specifies the probability that a random walk can be terminated abruptly before the criteria in the parameter ***graphWalkTerminationPolicy*** is satisfied.
 * The parameter subspace ***CostRewards*** is ignored for now.
 
+Maintenance notes
+===
+This program is written and maintained by [Dr. Mark Grechanik](https://www.cs.uic.edu/~drmark/).
+
+License
+===
+The license is Apache 2.0, see LICENSE-2.0.txt.
+
 
 
 
