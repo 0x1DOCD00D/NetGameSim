@@ -41,13 +41,15 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
         logger.error(s"Node ${node.id} is not in the other graph")
         acc + 1
     } + thisEdges.foldLeft(0){ case (acc, e) =>
-      if e.nodeU() == thatEdges.find(n => n == e).get.nodeU() &&
+      val found = thatEdges.find(n => n == e)
+      if found.isDefined && e.nodeU() == thatEdges.find(n => n == e).get.nodeU() &&
         e.nodeV() == thatEdges.find(n => n == e).get.nodeV()
       then acc else
         logger.error(s"Edge ${e.nodeU().id} -> ${e.nodeV().id} is not in the other graph")
         acc+1
     } + thatEdges.foldLeft(0){ case (acc, e) =>
-      if e.nodeU() == thisEdges.find(n => n == e).get.nodeU() &&
+      val found = thisEdges.find(n => n == e)
+      if found.isDefined && e.nodeU() == thisEdges.find(n => n == e).get.nodeU() &&
         e.nodeV() == thisEdges.find(n => n == e).get.nodeV()
       then acc else
         logger.error(s"Edge ${e.nodeU().id} -> ${e.nodeV().id} is not in the other graph")

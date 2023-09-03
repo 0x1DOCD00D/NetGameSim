@@ -63,11 +63,11 @@ object NGSConstants:
   val GRAPHWALKTERMINATIONPOLICY = "graphWalkTerminationPolicy"
   val GRAPHWALKNODETERMINATIONPROBABILITY = "graphWalkNodeTerminationProbability"
   val GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT = 0.05d
+  val DEFOUTFILEEXT = ".ngs"
   val OUTPUTDIRECTORY = "outputDirectory"
   def OUTPUTFILENAME: String =
-    val currentDate = new Date(System.currentTimeMillis())
     val df = new SimpleDateFormat("dd-MM-yy-HH-mm-ss")
-    "NetGraph_" + df.format(currentDate) + ".ngs"
+    "NetGraph_" + df.format(new Date(System.currentTimeMillis())) + DEFOUTFILEEXT
 
   val MALAPPBUDGET = "malAppBudget"
   val MALAPPBUDGETDEFAULT = 100.0d

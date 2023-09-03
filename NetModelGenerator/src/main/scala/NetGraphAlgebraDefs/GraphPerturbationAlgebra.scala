@@ -9,6 +9,7 @@ import scala.util.{Failure, Success, Try}
 import com.google.common.graph.*
 import org.slf4j.Logger
 
+import java.io.{File, PrintWriter}
 import java.util
 import scala.annotation.tailrec
 import scala.collection.immutable.TreeSeqMap.OrderBy
@@ -212,6 +213,41 @@ object GraphPerturbationAlgebra:
 
   def apply(graph: NetGraph, dissimulate: Boolean = false): (NetGraph, ModificationRecord) =
     new GraphPerturbationAlgebra(graph).perturbModel(dissimulate)
+
+  def persist(mr: ModificationRecord, fileName: String): Either[String, Unit] =
+    val nodes = mr.filter(_._1.node.isInstanceOf[NodeObject])
+    val modifiedNodes = nodes.filter(_._2.isInstanceOf[NodeModified])
+    val addedNodes = nodes.filter(_._2.isInstanceOf[NodeAdded])
+    val removedNodes = nodes.filter(_._2.isInstanceOf[NodeRemoved])
+    val edges = mr.filter(_._1.node.isInstanceOf[Action])
+    val modifiedEdges = edges.filter(_._2.isInstanceOf[EdgeModified])
+    val addedEdges = edges.filter(_._2.isInstanceOf[EdgeAdded])
+    val removedEdges = edges.filter(_._2.isInstanceOf[EdgeRemoved])
+    logger.info(s"There are ${modifiedNodes.length} modified nodes, ${addedNodes.length} added nodes and ${removedNodes.length} removed nodes.")
+    logger.info(s"There are ${modifiedEdges.length} modified edges, ${addedEdges.length} added edges and ${removedEdges.length} removed edges.")
+    val allNodesMod:List[String] = List("Nodes:\n") :::  modifiedNodes.foldLeft(List[String]("\tModified:\n"))(
+        (acc, elem) => s"\t\t${elem._1.node.asInstanceOf[NodeObject].id}: ${elem._2.asInstanceOf[NodeModified].node.id}\n" :: acc
+      ) ++ addedNodes.foldLeft(List[String]("\tAdded:\n"))(
+        (acc, elem) => s"\t\t${elem._1.node.asInstanceOf[NodeObject].id}: ${elem._2.asInstanceOf[NodeAdded].node.id}\n" :: acc
+      ) ++ removedNodes.foldLeft(List[String]("\tRemoved:\n"))(
+        (acc, elem) => s"\t\t${elem._1.node.asInstanceOf[NodeObject].id}: ${elem._2.asInstanceOf[NodeRemoved].node.id}\n" :: acc
+      )
+
+    val allEdgesMod: List[String] = List("Edges:\n") ::: modifiedEdges.foldLeft(List[String]("\tModified:\n"))(
+      (acc, elem) => s"\t\t${elem._1.node.asInstanceOf[Action].fromId}->${elem._1.node.asInstanceOf[Action].toId}: ${elem._2.asInstanceOf[EdgeModified].action.fromId}->${elem._2.asInstanceOf[EdgeModified].action.toId}\n" :: acc
+    ) ++ addedEdges.foldLeft(List[String]("\tAdded:\n"))(
+      (acc, elem) => s"\t\t${elem._1.node.asInstanceOf[Action].fromId}->${elem._1.node.asInstanceOf[Action].toId}: ${elem._2.asInstanceOf[EdgeAdded].edge.fromId}->${elem._2.asInstanceOf[EdgeAdded].edge.toId}\n" :: acc
+    ) ++ removedEdges.foldLeft(List[String]("\tRemoved:\n"))(
+      (acc, elem) => s"\t\t${elem._1.node.asInstanceOf[Action].fromId}->${elem._1.node.asInstanceOf[Action].toId}: ${elem._2.asInstanceOf[EdgeRemoved].edge.fromId}->${elem._2.asInstanceOf[EdgeRemoved].edge.toId}\n" :: acc
+    )
+
+    Try(new PrintWriter(new File(fileName))) match
+      case Success(fh) =>
+        try fh.write(allNodesMod.mkString.concat(allEdgesMod.mkString))
+        finally fh.close()
+        Right(())
+      case Failure(e) => Left(e.getMessage)
+
 
   def inverseMR(mr: ModificationRecord): ModificationRecordInverse =
     def netComponentFromPerturbation(perturbation: Perturbation): (NetGraphComponent, Double) = perturbation match
