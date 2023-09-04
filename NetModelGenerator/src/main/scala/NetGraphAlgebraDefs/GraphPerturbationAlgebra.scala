@@ -231,8 +231,7 @@ object GraphPerturbationAlgebra:
     val removedEdges = edges.filter(_._2.isInstanceOf[EdgeRemoved])
     logger.info(s"There are ${modifiedNodes.length} modified nodes, ${addedNodes.length} added nodes and ${removedNodes.length} removed nodes.")
     logger.info(s"There are ${modifiedEdges.length} modified edges, ${addedEdges.length} added edges and ${removedEdges.length} removed edges.")
-    val allNodesMod:String =˚
-      (List("Nodes:\n") ::: List("\tModified: [") ::: List(modifiedNodes.map(_._1.node.asInstanceOf[NodeObject].id).mkString(", ")) ::: List("]\n")
+    val allNodesMod:String = (List("Nodes:\n") ::: List("\tModified: [") ::: List(modifiedNodes.map(_._1.node.asInstanceOf[NodeObject].id).mkString(", ")) ::: List("]\n")
                        ::: List("\tRemoved: [") ::: List(removedNodes.map(_._1.node.asInstanceOf[NodeObject].id).mkString(", ")) ::: List("]\n")
                        ::: addedNodes.foldLeft(List[String]("\tAdded:\n"))(
                             (acc, elem) => acc ::: List(s"\t\t${elem._1.node.asInstanceOf[NodeObject].id}: ${elem._2.asInstanceOf[NodeAdded].node.id}\n"))).mkString
@@ -246,6 +245,7 @@ object GraphPerturbationAlgebra:
 
     Try(new PrintWriter(new File(fileName))) match
       case Success(fh) =>
+        //TODO: add write failure handler
         try fh.write(allNodesMod.mkString.concat(allEdgesMod.mkString))
         finally fh.close()
         Right(())
