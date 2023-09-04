@@ -46,11 +46,19 @@ To choose a higher version of the JVM we execute the following command ```export
 
 Running NetGameSim results in many log messages showing the progress of the execution and hopefully, if no error messages are shown then the last log entries can look like the following.
 ```log
-14:24:19.529 [main] INFO  - Generating DOT file for graph with 301 nodes for visualization as /Users/drmark/github/NetGameSim/outputs/Graph300Nodes.dot
-14:24:19.712 [main] INFO  - Successfully rendered the graph to /Users/drmark/github/NetGameSim/outputs/Graph300Nodes.dot
-14:24:19.712 [main] INFO  - A graph image file can be generated using the following command: sfdp -x -Goverlap=scale -Tpng /Users/drmark/github/NetGameSim/outputs/Graph300Nodes.dot > /Users/drmark/github/NetGameSim/outputs/Graph300Nodes.png
+11:51:08.894 [main] INFO  - Successfully persisted the graph to /Users/drmark/github/NetGameSim/outputs/Graph300Nodes.ngs.perturbed
+11:51:08.894 [main] INFO  - Generating DOT file for graph with 287 nodes for visualization as /Users/drmark/github/NetGameSim/outputs/Graph300Nodes.ngs.perturbed.dot
+11:51:08.938 [main] INFO  - Successfully rendered the graph to /Users/drmark/github/NetGameSim/outputs/Graph300Nodes.ngs.perturbed.dot
+11:51:08.938 [main] INFO  - A graph image file for the perturbed graph can be generated using the following command: sfdp -x -Goverlap=scale -Tpng /Users/drmark/github/NetGameSim/outputs/Graph300Nodes.ngs.perturbed.dot > /Users/drmark/github/NetGameSim/outputs/Graph300Nodes.ngs.perturbed.png
+11:51:08.941 [main] INFO  - 47 nodes and 138 edges have been perturbed
+11:51:08.941 [main] INFO  - There are 15 modified nodes, 9 added nodes and 23 removed nodes.
+11:51:08.941 [main] INFO  - There are 11 modified edges, 30 added edges and 97 removed edges.
+11:51:08.945 [main] INFO  - Done! Please check the content of the output directory /Users/drmark/github/NetGameSim/outputs/
 ```
 This last command is not run by NetGameSim intentionally. For large graphs it takes a while to generate its image and some users may avoid it altogether. Also, some parameters of the command ```sfdp``` may be different depending on the desired quality of the generated images and the capabilities of the computer used to generate images. This functionality is not critical for NetGameSim.
+
+Building NetGameSim from the command line results in the following output that can vary depending on the versions of Java, Scala and Sbt used to compile the project and generate the assembly jar.
+![Command line console output](CommandLineBuildOutput.png)
 
 Configuration
 ========

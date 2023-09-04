@@ -55,15 +55,18 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
   private def perturbNode(node: NodeObject, dissimulate: Boolean = false): ModificationRecord =
     val op2do: ACTIONS = ACTIONS.fromOrdinal(SupplierOfRandomness.onDemandInt(repeatable=true, pmaxv = ACTIONS.values.map(_.ordinal).toList.max, pminv = 0))
     if dissimulate then
-      logger.debug(s"Dissimulating node $node for the target app")
+      logger.debug(s"Dissimulating node $node")
       modifyNode(node)
     else
-      logger.debug(s"Applying perturbation $op2do on node $node")
+      logger.info(s"Applying perturbation $op2do on node $node")
       op2do match
         case ACTIONS.ADDNODE => if dissimulate then modifyNode(node) else addNode(node)
         case ACTIONS.MODIFYNODE => modifyNode(node)
         case ACTIONS.REMOVENODE => if dissimulate then modifyNode(node) else removeNode(node)
-        case op => operationOnEdges(node, op, dissimulate)
+        case op =>
+          val res = operationOnEdges(node, op, dissimulate)
+          logger.info(s"Modified an edge: ${res.mkString}")
+          res
   end perturbNode
 
   /*
@@ -160,7 +163,7 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
           logger.error(s"Failed to remove edge from $node to $chosenNode because it does not exist")
           Vector()
         else
-          logger.debug(s"Removed an edge from $node to $chosenNode successfully")
+          logger.info(s"Removed an edge from $node to $chosenNode successfully")
           Vector((OriginalNetComponent(node), EdgeRemoved(edge2Remove.get)))
       else
         logger.error(s"No edge exist from $node to $chosenNode but it should be there")
@@ -173,7 +176,7 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
     val edge2Modify: Option[Action] = newModel.sm.edgeValue(node, chosenNode).toScala
     val newEdge: Action = if edge2Modify.isEmpty then NetModelAlgebra.createAction(node, chosenNode) else edge2Modify.get.modify
     if newModel.sm.putEdgeValue(node, chosenNode, newEdge) == null then
-      logger.debug(s"Added edge $newEdge from $node to $chosenNode successfully")
+      logger.info(s"Added edge $newEdge from $node to $chosenNode successfully")
       Vector((OriginalNetComponent(node), EdgeAdded(newEdge)))
     else
       logger.debug(s"Former edge from $node to $chosenNode was $edge2Modify and it's replaced by the new edge $newEdge")
@@ -193,13 +196,15 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
 
 object GraphPerturbationAlgebra:
   trait Perturbation
+  trait NodePerturbation extends Perturbation
+  trait EdgePerturbation extends Perturbation
 
-  case class NodeModified(node: NodeObject) extends Perturbation
-  case class NodeRemoved(node: NodeObject) extends Perturbation
-  case class NodeAdded(node: NodeObject) extends Perturbation
-  case class EdgeRemoved(edge: Action) extends Perturbation
-  case class EdgeAdded(edge: Action) extends Perturbation
-  case class EdgeModified(action: Action) extends Perturbation
+  case class NodeModified(node: NodeObject) extends NodePerturbation
+  case class NodeRemoved(node: NodeObject) extends NodePerturbation
+  case class NodeAdded(node: NodeObject) extends NodePerturbation
+  case class EdgeRemoved(edge: Action) extends EdgePerturbation
+  case class EdgeAdded(edge: Action) extends EdgePerturbation
+  case class EdgeModified(edge: Action) extends EdgePerturbation
 
   case class OriginalNetComponent(node: NetGraphComponent)
 
@@ -215,30 +220,28 @@ object GraphPerturbationAlgebra:
     new GraphPerturbationAlgebra(graph).perturbModel(dissimulate)
 
   def persist(mr: ModificationRecord, fileName: String): Either[String, Unit] =
-    val nodes = mr.filter(_._1.node.isInstanceOf[NodeObject])
+    val nodes = mr.filter(_._2.isInstanceOf[NodePerturbation])
     val modifiedNodes = nodes.filter(_._2.isInstanceOf[NodeModified])
     val addedNodes = nodes.filter(_._2.isInstanceOf[NodeAdded])
     val removedNodes = nodes.filter(_._2.isInstanceOf[NodeRemoved])
-    val edges = mr.filter(_._1.node.isInstanceOf[Action])
+    val edges = mr.filter(_._2.isInstanceOf[EdgePerturbation])
+    logger.info(s"${nodes.length} nodes and ${edges.length} edges have been perturbed")
     val modifiedEdges = edges.filter(_._2.isInstanceOf[EdgeModified])
     val addedEdges = edges.filter(_._2.isInstanceOf[EdgeAdded])
     val removedEdges = edges.filter(_._2.isInstanceOf[EdgeRemoved])
     logger.info(s"There are ${modifiedNodes.length} modified nodes, ${addedNodes.length} added nodes and ${removedNodes.length} removed nodes.")
     logger.info(s"There are ${modifiedEdges.length} modified edges, ${addedEdges.length} added edges and ${removedEdges.length} removed edges.")
-    val allNodesMod:List[String] = List("Nodes:\n") :::  modifiedNodes.foldLeft(List[String]("\tModified:\n"))(
-        (acc, elem) => s"\t\t${elem._1.node.asInstanceOf[NodeObject].id}: ${elem._2.asInstanceOf[NodeModified].node.id}\n" :: acc
-      ) ++ addedNodes.foldLeft(List[String]("\tAdded:\n"))(
-        (acc, elem) => s"\t\t${elem._1.node.asInstanceOf[NodeObject].id}: ${elem._2.asInstanceOf[NodeAdded].node.id}\n" :: acc
-      ) ++ removedNodes.foldLeft(List[String]("\tRemoved:\n"))(
-        (acc, elem) => s"\t\t${elem._1.node.asInstanceOf[NodeObject].id}: ${elem._2.asInstanceOf[NodeRemoved].node.id}\n" :: acc
-      )
-
+    val allNodesMod:String =˚
+      (List("Nodes:\n") ::: List("\tModified: [") ::: List(modifiedNodes.map(_._1.node.asInstanceOf[NodeObject].id).mkString(", ")) ::: List("]\n")
+                       ::: List("\tRemoved: [") ::: List(removedNodes.map(_._1.node.asInstanceOf[NodeObject].id).mkString(", ")) ::: List("]\n")
+                       ::: addedNodes.foldLeft(List[String]("\tAdded:\n"))(
+                            (acc, elem) => acc ::: List(s"\t\t${elem._1.node.asInstanceOf[NodeObject].id}: ${elem._2.asInstanceOf[NodeAdded].node.id}\n"))).mkString
     val allEdgesMod: List[String] = List("Edges:\n") ::: modifiedEdges.foldLeft(List[String]("\tModified:\n"))(
-      (acc, elem) => s"\t\t${elem._1.node.asInstanceOf[Action].fromId}->${elem._1.node.asInstanceOf[Action].toId}: ${elem._2.asInstanceOf[EdgeModified].action.fromId}->${elem._2.asInstanceOf[EdgeModified].action.toId}\n" :: acc
+      (acc, elem) => acc ::: List(s"\t\t${elem._2.asInstanceOf[EdgeModified].edge.fromNode.id}: ${elem._2.asInstanceOf[EdgeModified].edge.toNode.id}\n")
     ) ++ addedEdges.foldLeft(List[String]("\tAdded:\n"))(
-      (acc, elem) => s"\t\t${elem._1.node.asInstanceOf[Action].fromId}->${elem._1.node.asInstanceOf[Action].toId}: ${elem._2.asInstanceOf[EdgeAdded].edge.fromId}->${elem._2.asInstanceOf[EdgeAdded].edge.toId}\n" :: acc
+      (acc, elem) => acc ::: List(s"\t\t${elem._2.asInstanceOf[EdgeAdded].edge.fromNode.id}: ${elem._2.asInstanceOf[EdgeAdded].edge.toNode.id}\n")
     ) ++ removedEdges.foldLeft(List[String]("\tRemoved:\n"))(
-      (acc, elem) => s"\t\t${elem._1.node.asInstanceOf[Action].fromId}->${elem._1.node.asInstanceOf[Action].toId}: ${elem._2.asInstanceOf[EdgeRemoved].edge.fromId}->${elem._2.asInstanceOf[EdgeRemoved].edge.toId}\n" :: acc
+      (acc, elem) => acc ::: List(s"\t\t${elem._2.asInstanceOf[EdgeRemoved].edge.fromNode.id}: ${elem._2.asInstanceOf[EdgeRemoved].edge.toNode.id}\n")
     )
 
     Try(new PrintWriter(new File(fileName))) match

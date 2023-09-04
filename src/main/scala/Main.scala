@@ -69,4 +69,6 @@ object Main:
       val modifications:ModificationRecord = perturbation._2
       GraphPerturbationAlgebra.persist(modifications, outputDirectory.concat(outGraphFileName.concat(".yaml"))) match
         case Left(value) => logger.error(s"Failed to save modifications in ${outputDirectory.concat(outGraphFileName.concat(".yaml"))} for reason $value")
-        case Right(value) => logger.info(s"Done! Please check the content of the output directory $outputDirectory")
+        case Right(value) =>
+          logger.info(s"Diff yaml file ${outputDirectory.concat(outGraphFileName.concat(".yaml"))} contains the delta between the original and the perturbed graphs.")
+          logger.info(s"Done! Please check the content of the output directory $outputDirectory")
