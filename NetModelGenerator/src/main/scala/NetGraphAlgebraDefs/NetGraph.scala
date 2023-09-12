@@ -180,17 +180,18 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject) extends GraphSto
       else false
     end relax
 
-    def explore(node: NodeObject): Unit =
-      require(node != null, "The NodeObject node must not be null")
-      val successors = sm.successors(node).asScala.toList
-      val relaxNode: NodeObject => Boolean = relax(node)
-      successors match
-        case Nil => ()
-        case hd :: tl => if relaxNode(hd) then explore(hd)
-          tl.foreach(cn => if relaxNode(cn) then explore(cn) else ())
+    @tailrec
+    def explore(nodes: List[NodeObject]): Unit =
+      require(nodes != null, "The list of NodeObject nodes must not be null")
+      val nextBatchOfNodes = nodes.flatMap { node =>
+        val relaxNode: NodeObject => Boolean = relax(node)
+        sm.successors(node).asScala.toList.filter(relaxNode)
+      }
+      if nextBatchOfNodes.isEmpty then ()
+      else explore(nextBatchOfNodes)
     end explore
 
-    explore(initState)
+    explore(List(initState))
     distanceMap.toMap
   end distances
 
