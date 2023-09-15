@@ -208,7 +208,7 @@ object NetModelAlgebra:
       if fCount > 0 then SupplierOfRandomness.onDemandInt(pmaxv = fCount, repeatable = false) else 0,
       if tCount > 0 then SupplierOfRandomness.onDemandInt(pmaxv = tCount, repeatable = false) else 0,
       if SupplierOfRandomness.onDemandInt(repeatable = false) % 2 == 0 then None else Some(SupplierOfRandomness.onDemandInt(pmaxv = propValueRange, repeatable = false)),
-      0.2
+      cost
     )
   //  each node of the graph is a NodeObject that corresponds to some physical entity, which is a tree of some objects
   @main def runNetModelAlgebra(args: String*): Unit =

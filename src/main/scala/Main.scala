@@ -39,7 +39,7 @@ object Main:
         .map(_.getHostAddress).toList.foreach(a => logger.info(a))
 
     val existingGraph = java.io.File(s"$outputDirectory$outGraphFileName").exists
-    val g = if existingGraph then
+    val g: Option[NetGraph] = if existingGraph then
       logger.warn(s"File $outputDirectory$outGraphFileName is located, loading it up. If you want a new generated graph please delete the existing file or change the file name.")
       NetGraph.load(fileName = s"$outputDirectory$outGraphFileName")
     else
@@ -52,6 +52,7 @@ object Main:
 
     if g.isEmpty then logger.error("Failed to generate a graph. Exiting...")
     else
+      logger.info(s"The original graph contains ${g.get.totalNodes} nodes and ${g.get.sm.edges().size()} edges; the configuration parameter specified ${NetModelAlgebra.statesTotal} nodes.")
       if !existingGraph then
         g.get.persist(fileName = outGraphFileName)
         logger.info(s"Generating DOT file for graph with ${g.get.totalNodes} nodes for visualization as $outputDirectory$outGraphFileName.dot")

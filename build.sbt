@@ -66,8 +66,9 @@ compileOrder := CompileOrder.JavaThenScala
 test / fork := true
 run / fork := true
 run / javaOptions ++= Seq(
-  "-Xms4096M",
-  "-Xmx80000M"
+  "-Xms8G",
+  "-Xmx100G",
+  "-XX:+UseG1GC"
 )
 
 Compile / mainClass := Some("com.lsc.Main")
