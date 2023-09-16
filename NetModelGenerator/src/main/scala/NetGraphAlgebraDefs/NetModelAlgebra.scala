@@ -88,6 +88,7 @@ class NetModel extends NetGraphConnectednessFinalizer:
       logger.info(s"$msg: ${progress * 100 / total}%")
     ()
   end reportProgress
+  
   def generateModel(forceReachability: Boolean = false): Option[NetGraph] =
     logger.info(s"Generating a random graph with $statesTotal nodes and ${if forceReachability then s"ensuring ${desiredReachabilityCoverage*100}%" else "random"} reachability")
     createNodes()

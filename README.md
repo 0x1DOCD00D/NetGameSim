@@ -60,6 +60,9 @@ This last command is not run by NetGameSim intentionally. For large graphs it ta
 Building NetGameSim from the command line results in the following output that can vary depending on the versions of Java, Scala and Sbt used to compile the project and generate the assembly jar.
 ![Command line console output](CommandLineBuildOutput.png)
 
+For more detailed code walkthru please watch this video.
+[![NetGameSim Overview](http://img.youtube.com/vi/6fdazJBkdjA/0.jpg)](http://www.youtube.com/watch?v=6fdazJBkdjA)
+
 Configuration
 ========
 All NetGameSim's configuration options are defined in [application.conf] under ```GenericSimUtilities/src/main/resources/application.conf``` where configuration option file for logging ```logback.xml``` is also located. Users can provide their own external ```application.conf``` to execute ```netmodelsim.jar``` from command line by using the JVM option ```-D``` as in [-Dconfig.file=path/to/config-file](https://github.com/lightbend/config).
