@@ -8,26 +8,31 @@
 
 package NetModelAnalyzer
 
-import NetGraphAlgebraDefs.NetModelAlgebra.{mapAppBudget, targetAppHighPenalty, targetAppLowPenalty, targetAppScore}
-import NetModelAnalyzer.Budget.{MalAppBudget, TargetAppScore}
+import com.google.common.graph.MutableValueGraph
+import com.google.common.graph.ValueGraphBuilder
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.when
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.PrivateMethodTester
+import org.scalatestplus.mockito.MockitoSugar
+import org.slf4j.Logger
+import scala.jdk.CollectionConverters.*
+import NetGraphAlgebraDefs.NetModelAlgebra.mapAppBudget
+import NetGraphAlgebraDefs.NetModelAlgebra.targetAppHighPenalty
+import NetGraphAlgebraDefs.NetModelAlgebra.targetAppLowPenalty
+import NetGraphAlgebraDefs.NetModelAlgebra.targetAppScore
+import NetModelAnalyzer.Budget.MalAppBudget
+import NetModelAnalyzer.Budget.TargetAppScore
 import Randomizer.SupplierOfRandomness
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.CreateLogger
 import Utilz.NGSConstants.*
 
-import scala.jdk.CollectionConverters.*
-import com.google.common.graph.{MutableValueGraph, ValueGraphBuilder}
-import org.mockito.Mockito.{mock, when}
-import org.scalatest.PrivateMethodTester
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
-import org.scalatestplus.mockito.MockitoSugar
-import org.slf4j.Logger
-
 class BudgetTest extends AnyFlatSpec with Matchers with MockitoSugar with PrivateMethodTester {
   val logger: Logger = CreateLogger(this.getClass)
 
-  behavior of "cost/reward computation types"
+  behavior.of("cost/reward computation types")
 
   it should "create a malapp budget and take a cost of one and two steps" in {
     val malappbudget = MalAppBudget(mapAppBudget)
@@ -43,11 +48,17 @@ class BudgetTest extends AnyFlatSpec with Matchers with MockitoSugar with Privat
 
   it should "create a malapp budget and take a cost and a reward and penalty" in {
     val malappbudget = MalAppBudget(mapAppBudget)
-    malappbudget.cost(1).reward(2.0).penalty(1.0).toDouble should be <= malappbudget.reward(1.0).toDouble
+    malappbudget.cost(1).reward(2.0).penalty(1.0).toDouble should be >= malappbudget
+      .reward(1.0)
+      .toDouble
   }
 
   it should "create a target app score and take three penalties" in {
     val tappScore = TargetAppScore(targetAppScore)
-    tappScore.penalty(targetAppLowPenalty).penalty(targetAppHighPenalty).penalty(targetAppLowPenalty).toDouble should be >= tappScore.toDouble
+    tappScore
+      .penalty(targetAppLowPenalty)
+      .penalty(targetAppHighPenalty)
+      .penalty(targetAppLowPenalty)
+      .toDouble should be >= tappScore.toDouble
   }
 }

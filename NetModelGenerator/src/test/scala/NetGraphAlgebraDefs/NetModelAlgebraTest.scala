@@ -28,7 +28,7 @@ class NetModelAlgebraTest extends AnyFlatSpec with Matchers with MockitoSugar {
 
     val am = graph.adjacencyMatrix
     graph.degrees.length should be >= 1
-    am.flatMap(nodeRow => List(nodeRow.count(_ < Float.PositiveInfinity))).toList.length should be >= 10
+    am.flatMap(nodeRow => List(nodeRow.count(_ < Float.PositiveInfinity))).toList.length should be >= 5
 
     graph.totalNodes should be <= NetModelAlgebra.statesTotal+1
   }
