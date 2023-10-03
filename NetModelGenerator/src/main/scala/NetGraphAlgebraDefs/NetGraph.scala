@@ -266,7 +266,7 @@ object NetGraph:
       val logger: Logger = CreateLogger(classOf[NetGraph])
       val file = "/NetGameSimfileName.ngs.perturbed"
       val dir = "/Users/drmark/github/cs441-hw1"
-      val result_perturbed = NetGraph.load(file, dir);
+      val result_perturbed = NetGraph.load(file, dir)
 
       result_perturbed match {
         case Some(_) => logger.info("Loaded graph")
