@@ -7,6 +7,7 @@ import NetModelAnalyzer.Analyzer
 import Randomizer.SupplierOfRandomness
 import Utilz.{CreateLogger, NGSConstants}
 import com.google.common.graph.ValueGraph
+import com.lsc.DotFileParser.logger
 
 import java.util.concurrent.{ThreadLocalRandom, TimeUnit}
 import scala.concurrent.duration.*
@@ -73,3 +74,11 @@ object Main:
         case Right(value) =>
           logger.info(s"Diff yaml file ${outputDirectory.concat(outGraphFileName.concat(".yaml"))} contains the delta between the original and the perturbed graphs.")
           logger.info(s"Done! Please check the content of the output directory $outputDirectory")
+
+      val originalDotFilePath = s"$outputDirectory$outGraphFileName.dot"
+      val perturbedDotFilePath = s"$outputDirectory$perturbedOutGraphFileName.dot"
+      val filename = outputDirectory.concat(outGraphFileName.concat(".yaml"))
+      logger.info(s"Original Dot File Path: $originalDotFilePath")
+      logger.info(s"Perturbed Dot File Path: $perturbedDotFilePath")
+      logger.info(s"cFilename: $filename")
+      DotFileParser.parseFiles(originalDotFilePath, perturbedDotFilePath, filename)

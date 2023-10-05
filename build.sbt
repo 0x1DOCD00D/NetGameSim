@@ -45,6 +45,13 @@ lazy val NetModelGenerator = (project in file("NetModelGenerator"))
       "commons-io" % "commons-io" % apacheCommonsVersion,
       "org.jgrapht" % "jgrapht-core" % jGraphTlibVersion,
       "org.jgrapht" % "jgrapht-guava" % guavaAdapter2jGraphtVersion,
+      "org.graphstream" % "gs-core" % "2.0",
+      "org.graphstream" % "gs-algo" % "2.0",
+      "org.graphstream" % "gs-ui" % "1.3",
+      "org.yaml" % "snakeyaml" % "2.0",
+      "org.apache.hadoop" % "hadoop-client" % "3.3.1",
+      "org.apache.hadoop" % "hadoop-common" % "3.3.1",
+      "org.apache.hadoop" % "hadoop-mapreduce-client-core" % "3.3.1",
     )
   ).dependsOn(GenericSimUtilities)
 
