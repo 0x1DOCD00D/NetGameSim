@@ -1,3 +1,7 @@
+import sbt.Keys.libraryDependencies
+
+import scala.collection.Seq
+
 ThisBuild / version := "0.1.0-SNAPSHOT"
 
 Global / excludeLintKeys += idePackagePrefix
@@ -24,14 +28,16 @@ lazy val commonDependencies = Seq(
   "com.typesafe" % "config" % typeSafeConfigVersion,
   "ch.qos.logback" % "logback-classic" % logbackVersion,
   "net.bytebuddy" % "byte-buddy" % netBuddyVersion
-)
+).map(_.exclude("org.slf4j", "*"))
+
 
 lazy val root = (project in file("."))
   .settings(
     scalaVersion := "3.2.2",
     name := "NetGameSim",
     idePackagePrefix := Some("com.lsc"),
-    libraryDependencies ++= commonDependencies
+    libraryDependencies ++= commonDependencies,
+    libraryDependencies  ++= Seq("ch.qos.logback" % "logback-classic" % logbackVersion)
   ).aggregate(NetModelGenerator,GenericSimUtilities).dependsOn(NetModelGenerator)
 
 lazy val NetModelGenerator = (project in file("NetModelGenerator"))
@@ -45,14 +51,16 @@ lazy val NetModelGenerator = (project in file("NetModelGenerator"))
       "commons-io" % "commons-io" % apacheCommonsVersion,
       "org.jgrapht" % "jgrapht-core" % jGraphTlibVersion,
       "org.jgrapht" % "jgrapht-guava" % guavaAdapter2jGraphtVersion,
-    )
+    ),
+    libraryDependencies  ++= Seq("ch.qos.logback" % "logback-classic" % logbackVersion)
   ).dependsOn(GenericSimUtilities)
 
 lazy val GenericSimUtilities = (project in file("GenericSimUtilities"))
   .settings(
     scalaVersion := "3.2.2",
     name := "GenericSimUtilities",
-    libraryDependencies ++= commonDependencies
+    libraryDependencies ++= commonDependencies,
+    libraryDependencies  ++= Seq("ch.qos.logback" % "logback-classic" % logbackVersion)
   )
 
 
