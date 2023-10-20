@@ -63,6 +63,8 @@ object NGSConstants:
   val GRAPHWALKTERMINATIONPOLICY = "graphWalkTerminationPolicy"
   val GRAPHWALKNODETERMINATIONPROBABILITY = "graphWalkNodeTerminationProbability"
   val GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT = 0.05d
+  val VALUABLEDATAPROBABILITY = "valuableDataProbability"
+  val VALUABLEDATAPROBABILITYDEFAULT = 0.001d
   val DEFOUTFILEEXT = ".ngs"
   val OUTPUTDIRECTORY = "outputDirectory"
   def OUTPUTFILENAME: String =

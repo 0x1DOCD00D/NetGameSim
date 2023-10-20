@@ -1,10 +1,10 @@
 package NetGraphAlgebraDefs
 
-import NetGraphAlgebraDefs.NetModelAlgebra.{actionRange, connectedness, createAction, desiredReachabilityCoverage, edgeProbability, logger, maxBranchingFactor, maxDepth, maxProperties, propValueRange, statesTotal}
+import NetGraphAlgebraDefs.NetModelAlgebra.{actionRange, connectedness, createAction, desiredReachabilityCoverage, edgeProbability, logger, maxBranchingFactor, maxDepth, maxProperties, propValueRange, statesTotal, valuableDataProbability}
 import Randomizer.{SupplierOfRandomness, UniformProbGenerator}
 import Utilz.ConfigReader.getConfigEntry
 import Utilz.{CreateLogger, NGSConstants}
-import Utilz.NGSConstants.{ACTIONRANGE, ACTIONRANGEDEFAULT, ACTIONTYPE, ACTIONTYPEDEFAULT, CONNECTEDNESS, CONNECTEDNESSDEFAULT, COSTOFDETECTION, COSTOFDETECTIONDEFAULT, DEFAULTDISSIMULATIONCOEFFICIENT, DEFAULTDISTANCECOEFFICIENT, DEFAULTDISTANCESPREADTHRESHOLD, DEFAULTEDGEPROBABILITY, DEFAULTPERTURBATIONCOEFFICIENT, DESIREDREACHABILITYCOVERAGE, DESIREDREACHABILITYCOVERAGEDEFAULT, DISSIMULATIONCOEFFICIENT, DISTANCECOEFFICIENT, DISTANCESPREADTHRESHOLD, EDGEPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT, GRAPHWALKTERMINATIONPOLICY, GRAPHWALKTERMINATIONPOLICYDEFAULT, MALAPPBUDGET, MALAPPBUDGETDEFAULT, MAXBRANCHINGFACTOR, MAXBRANCHINGFACTORDEFAULT, MAXDEPTH, MAXDEPTHDEFAULT, MAXPROPERTIES, MAXPROPERTIESDEFAULT, MAXWALKPATHLENGTHCOEFF, MAXWALKPATHLENGTHCOEFFDEFAULT, NUMBEROFEXPERIMENTS, NUMBEROFEXPERIMENTSDEFAULT, PERTURBATIONCOEFFICIENT, PROPVALUERANGE, PROPVALUERANGEDEFAULT, SEED, SERVICEPENALTY, SERVICEPENALTYDEFAULT, SERVICEREWARD, SERVICEREWARDDEFAULT, SERVICEREWARDPROBABILITY, SERVICEREWARDPROBABILITYDEFAULT, STATESTOTAL, STATESTOTALDEFAULT, TARGETAPPHIGHPENALTY, TARGETAPPHIGHPENALTYDEFAULT, TARGETAPPLOWPENALTY, TARGETAPPLOWPENALTYDEFAULT, TARGETAPPSCORE, TARGETAPPSCOREDEFAULT, WALKS, WALKSDEFAULT}
+import Utilz.NGSConstants.{ACTIONRANGE, ACTIONRANGEDEFAULT, ACTIONTYPE, ACTIONTYPEDEFAULT, CONNECTEDNESS, CONNECTEDNESSDEFAULT, COSTOFDETECTION, COSTOFDETECTIONDEFAULT, DEFAULTDISSIMULATIONCOEFFICIENT, DEFAULTDISTANCECOEFFICIENT, DEFAULTDISTANCESPREADTHRESHOLD, DEFAULTEDGEPROBABILITY, DEFAULTPERTURBATIONCOEFFICIENT, DESIREDREACHABILITYCOVERAGE, DESIREDREACHABILITYCOVERAGEDEFAULT, DISSIMULATIONCOEFFICIENT, DISTANCECOEFFICIENT, DISTANCESPREADTHRESHOLD, EDGEPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT, GRAPHWALKTERMINATIONPOLICY, GRAPHWALKTERMINATIONPOLICYDEFAULT, MALAPPBUDGET, MALAPPBUDGETDEFAULT, MAXBRANCHINGFACTOR, MAXBRANCHINGFACTORDEFAULT, MAXDEPTH, MAXDEPTHDEFAULT, MAXPROPERTIES, MAXPROPERTIESDEFAULT, MAXWALKPATHLENGTHCOEFF, MAXWALKPATHLENGTHCOEFFDEFAULT, NUMBEROFEXPERIMENTS, NUMBEROFEXPERIMENTSDEFAULT, PERTURBATIONCOEFFICIENT, PROPVALUERANGE, PROPVALUERANGEDEFAULT, SEED, SERVICEPENALTY, SERVICEPENALTYDEFAULT, SERVICEREWARD, SERVICEREWARDDEFAULT, SERVICEREWARDPROBABILITY, SERVICEREWARDPROBABILITYDEFAULT, STATESTOTAL, STATESTOTALDEFAULT, TARGETAPPHIGHPENALTY, TARGETAPPHIGHPENALTYDEFAULT, TARGETAPPLOWPENALTY, TARGETAPPLOWPENALTYDEFAULT, TARGETAPPSCORE, TARGETAPPSCOREDEFAULT, VALUABLEDATAPROBABILITY, VALUABLEDATAPROBABILITYDEFAULT, WALKS, WALKSDEFAULT}
 import com.google.common.graph.*
 import org.slf4j.Logger
 
@@ -45,7 +45,8 @@ class NetModel extends NetGraphConnectednessFinalizer:
         maxDepth = SupplierOfRandomness.onDemandInt(pmaxv = maxDepth, repeatable = false),
         maxBranchingFactor = SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor, repeatable = false),
         maxProperties = SupplierOfRandomness.onDemandInt(pmaxv = maxProperties, repeatable = false),
-        storedValue = SupplierOfRandomness.onDemandReal(repeatable = false)
+        storedValue = SupplierOfRandomness.onDemandReal(repeatable = false),
+        valuableData = SupplierOfRandomness.`YesOrNo?`(valuableDataProbability)()
       )
     }
     logger.info(s"Inserting ${allNodes.size} created nodes into the graph")
@@ -132,7 +133,8 @@ class NetModel extends NetGraphConnectednessFinalizer:
     val newInitNode: NodeObject = NodeObject(0, SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor),
       SupplierOfRandomness.onDemandInt(pmaxv = maxProperties), propValueRange = SupplierOfRandomness.onDemandInt(pmaxv = propValueRange),
       maxDepth = SupplierOfRandomness.onDemandInt(pmaxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor),
-      maxProperties = SupplierOfRandomness.onDemandInt(pmaxv = maxProperties), SupplierOfRandomness.onDemandReal()
+      maxProperties = SupplierOfRandomness.onDemandInt(pmaxv = maxProperties), SupplierOfRandomness.onDemandReal(),
+      valuableData = SupplierOfRandomness.`YesOrNo?`(valuableDataProbability)()
     )
     stateMachine.addNode(newInitNode)
     allNodes.sortBy(node => (stateMachine.outDegree(node), stateMachine.inDegree(node)))( Ordering.Tuple2(Ordering.Int.reverse, Ordering.Int)).take(connectedness).foreach {
@@ -168,6 +170,7 @@ object NetModelAlgebra:
   val maxWalkPathLengthCoeff: Double = getConfigEntry(NGSConstants.configNetGameModel,MAXWALKPATHLENGTHCOEFF, MAXWALKPATHLENGTHCOEFFDEFAULT)
   val graphWalkTerminationPolicy: String = getConfigEntry(NGSConstants.configNetGameModel,GRAPHWALKTERMINATIONPOLICY, GRAPHWALKTERMINATIONPOLICYDEFAULT)
   val graphWalkNodeTerminationProbability: Double = getConfigEntry(NGSConstants.configNetGameModel,GRAPHWALKNODETERMINATIONPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT)
+  val valuableDataProbability: Double = getConfigEntry(NGSConstants.configNetGameModel,VALUABLEDATAPROBABILITY, VALUABLEDATAPROBABILITYDEFAULT)
   val outputDirectory: String = {
     val defDir = new java.io.File(".").getCanonicalPath
     logger.info(s"Default output directory: $defDir")

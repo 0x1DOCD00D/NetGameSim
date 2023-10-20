@@ -1,6 +1,6 @@
 package NetGraphAlgebraDefs
 
-import NetGraphAlgebraDefs.NetModelAlgebra.{dissimulationCoefficient, edgeProbability, maxBranchingFactor, maxDepth, maxProperties, perturbationCoeff, propValueRange, targetAppHighPenalty, targetAppLowPenalty}
+import NetGraphAlgebraDefs.NetModelAlgebra.{dissimulationCoefficient, edgeProbability, maxBranchingFactor, maxDepth, maxProperties, perturbationCoeff, propValueRange, targetAppHighPenalty, targetAppLowPenalty, valuableDataProbability}
 import NetGraphAlgebraDefs.GraphPerturbationAlgebra.{ACTIONS, EdgeAdded, EdgeModified, EdgeRemoved, ModificationRecord, NodeAdded, NodeModified, OriginalNetComponent, Perturbation, logger}
 import Randomizer.SupplierOfRandomness
 import Utilz.CreateLogger
@@ -96,7 +96,7 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
     val newNode: NodeObject = NodeObject(newModel.sm.nodes().asScala.map(_.id).max + 1, SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor),
       SupplierOfRandomness.onDemandInt(pmaxv = maxProperties), propValueRange = SupplierOfRandomness.onDemandInt(pmaxv = propValueRange),
       maxDepth = SupplierOfRandomness.onDemandInt(pmaxv = maxDepth), maxBranchingFactor = SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor),
-      maxProperties = SupplierOfRandomness.onDemandInt(pmaxv = maxProperties), SupplierOfRandomness.onDemandReal(true))
+      maxProperties = SupplierOfRandomness.onDemandInt(pmaxv = maxProperties), SupplierOfRandomness.onDemandReal(true), SupplierOfRandomness.`YesOrNo?`(valuableDataProbability)())
     val newEdge: Action = NetModelAlgebra.createAction(node, newNode)
     if newModel.sm.addNode(newNode) then
       Try(newModel.sm.putEdgeValue(node, newNode, newEdge)) match
