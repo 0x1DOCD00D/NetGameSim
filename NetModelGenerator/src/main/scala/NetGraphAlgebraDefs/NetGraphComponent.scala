@@ -7,8 +7,9 @@ import Randomizer.UniformProbGenerator.*
 import scala.collection.parallel.*
 import scala.collection.parallel.CollectionConverters.*
 
-trait NetGraphComponent
+trait NetGraphComponent extends Serializable
 
+@SerialVersionUID(123L)
 case class NodeObject(id: Int, children: Int, props: Int, currentDepth: Int = 1, propValueRange:Int, maxDepth:Int,
                       maxBranchingFactor:Int, maxProperties:Int, storedValue: Double, valuableData: Boolean = false) extends NetGraphComponent:
   val properties: List[Int] = 1.to(props).par.map(_=>SupplierOfRandomness.onDemandInt(pmaxv = NetGraphAlgebraDefs.NetModelAlgebra.propValueRange, repeatable = false)).toList
@@ -40,8 +41,12 @@ case class NodeObject(id: Int, children: Int, props: Int, currentDepth: Int = 1,
       valuableData
     )
 
+@SerialVersionUID(123L)
 case class Action(actionType: Int, fromNode: NodeObject, toNode: NodeObject, fromId: Int, toId: Int, resultingValue: Option[Int], cost: Double) extends NetGraphComponent:
   def modify: Action = Action(SupplierOfRandomness.onDemandInt(pmaxv = NetModelAlgebra.actionRange), fromNode, toNode, fromId, toId, resultingValue, SupplierOfRandomness.randProbs(1)().head)
 
+@SerialVersionUID(123L)
 case object TerminalNode extends NetGraphComponent
+
+@SerialVersionUID(123L)
 case object TerminalAction extends NetGraphComponent
