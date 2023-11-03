@@ -181,7 +181,7 @@ object NetModelAlgebra:
       if dir.endsWith("/") then dir else dir + "/"
     else
       logger.error(s"Output directory $dir does not exist or is not a directory, using current directory instead: $defDir")
-      defDir
+      defDir + "/"
   }
   val MAXPATHLENGTHTC:String = "maxpathlength"
   val UNTILCYCLETC:String = "untilcycle"

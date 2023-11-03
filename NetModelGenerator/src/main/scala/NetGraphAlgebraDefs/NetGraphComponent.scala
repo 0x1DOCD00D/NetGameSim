@@ -7,7 +7,7 @@ import Randomizer.UniformProbGenerator.*
 import scala.collection.parallel.*
 import scala.collection.parallel.CollectionConverters.*
 
-trait NetGraphComponent extends Serializable
+sealed trait NetGraphComponent extends Serializable
 
 @SerialVersionUID(123L)
 case class NodeObject(id: Int, children: Int, props: Int, currentDepth: Int = 1, propValueRange:Int, maxDepth:Int,

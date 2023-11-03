@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ScalaCompilerConfiguration">
+    <profile name="sbt 1" modules="GenericSimUtilities,NetModelGenerator,netgamesim_2972" />
+    <profile name="sbt 2" modules="NetGameSim">
+      <option name="compileOrder" value="JavaThenScala" />
+      <option name="deprecationWarnings" value="true" />
+      <option name="featureWarnings" value="true" />
+      <parameters>
+        <parameter value="--explain-types" />
+      </parameters>
+    </profile>
+  </component>
+</project>

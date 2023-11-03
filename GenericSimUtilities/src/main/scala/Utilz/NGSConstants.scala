@@ -67,9 +67,9 @@ object NGSConstants:
   val VALUABLEDATAPROBABILITYDEFAULT = 0.001d
   val DEFOUTFILEEXT = ".ngs"
   val OUTPUTDIRECTORY = "outputDirectory"
-  def OUTPUTFILENAME: String =
+  def OUTPUTFILENAME(ext: String = DEFOUTFILEEXT): String =
     val df = new SimpleDateFormat("dd-MM-yy-HH-mm-ss")
-    "NetGraph_" + df.format(new Date(System.currentTimeMillis())) + DEFOUTFILEEXT
+    "NetGraph_" + df.format(new Date(System.currentTimeMillis())) + ext
 
   val MALAPPBUDGET = "malAppBudget"
   val MALAPPBUDGETDEFAULT = 100.0d

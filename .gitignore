@@ -143,3 +143,6 @@ target/streams/compile/unmanagedClasspath/_global/streams/out
 target/streams/runtime/unmanagedClasspath/_global/streams/out
 target/streams/test/unmanagedClasspath/_global/streams/out
 target/task-temp-directory/
+
+# macOS
+.DS_Store
