@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/GenericSimUtilities.iml" filepath="$PROJECT_DIR$/.idea/modules/GenericSimUtilities.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/NetGameSim.iml" filepath="$PROJECT_DIR$/.idea/modules/NetGameSim.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/NetGameSim-build.iml" filepath="$PROJECT_DIR$/.idea/modules/NetGameSim-build.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/NetModelGenerator.iml" filepath="$PROJECT_DIR$/.idea/modules/NetModelGenerator.iml" />
+    </modules>
+  </component>
+</project>

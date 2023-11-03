@@ -12,25 +12,43 @@ import guru.nidi.graphviz.engine.{EngineResult, Format, Graphviz, GraphvizCmdLin
 import guru.nidi.graphviz.model.Factory.{graph, linkAttrs, node, to}
 import guru.nidi.graphviz.model.{Graph, Node}
 
-import java.io.File
+import java.io.{File, FileWriter}
 import java.util.concurrent.TimeUnit
+import io.circe.*
+import io.circe.generic.auto.*
+import io.circe.parser.*
+import io.circe.syntax.*
 
 trait GraphStore:
   self: NetGraph =>
-    def persist(dir: String = outputDirectory, fileName: String = NGSConstants.OUTPUTFILENAME): Unit =
-      import java.io._
-      import java.util.Base64
-      import java.nio.charset.StandardCharsets.UTF_8
+    def persist(dir: String = outputDirectory, fileName: String = NGSConstants.OUTPUTFILENAME()): Unit =
+      if(fileName.endsWith(NGSConstants.DEFOUTFILEEXT)) then
+        import java.io._
+        import java.util.Base64
+        import java.nio.charset.StandardCharsets.UTF_8
 
-      val fullGraphAsList: List[NetGraphComponent] = sm.nodes().asScala.toList ::: sm.edges().asScala.toList.map { edge =>
-        sm.edgeValue(edge.source(), edge.target()).get
-      }
-      Try(new FileOutputStream(s"$dir$fileName", false)).map(fos => new ObjectOutputStream(fos)).map { oos =>
-        oos.writeObject(fullGraphAsList)
-        oos.flush()
-        oos.close()
-      }.map(_ => NetGraph.logger.info(s"Successfully persisted the graph to $dir$fileName"))
-        .recover { case e => NetGraph.logger.error(s"Failed to persist the graph to $dir$fileName : ", e) }
+        val fullGraphAsList: List[NetGraphComponent] = sm.nodes().asScala.toList ::: sm.edges().asScala.toList.map { edge =>
+          sm.edgeValue(edge.source(), edge.target()).get
+        }
+        Try(new FileOutputStream(s"$dir$fileName", false)).map(fos => new ObjectOutputStream(fos)).map { oos =>
+            oos.writeObject(fullGraphAsList)
+            oos.flush()
+            oos.close()
+          }.map(_ => NetGraph.logger.info(s"Successfully persisted the graph to $dir$fileName"))
+          .recover { case e => NetGraph.logger.error(s"Failed to persist the graph to $dir$fileName : ", e) }
+      else
+        Try {
+          val nodesInGraph: String = sm.nodes().asScala.asJson.noSpaces
+          val edgesInGraph: String = sm.edges().asScala.toList.map { edge =>
+            sm.edgeValue(edge.source(), edge.target()).get
+          }.asJson.noSpaces
+
+          val file = new FileWriter(s"$dir$fileName")
+          file.write(nodesInGraph + "\n" + edgesInGraph)
+          file.close()
+
+        }.map(_ => NetGraph.logger.info(s"Successfully persisted the graph in json to $dir$fileName"))
+          .recover { case e => NetGraph.logger.error(s"Failed to persist the graph in json to $dir$fileName : ", e) }
 
 //  Use the following graphviz command to render the graph to an image:
 //  sfdp -x -Goverlap=scale -Tpng graph.dot > graph.png

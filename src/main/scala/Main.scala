@@ -26,7 +26,7 @@ object Main:
 
   def main(args: Array[String]): Unit =
     import scala.jdk.CollectionConverters.*
-    val outGraphFileName = if args.isEmpty then NGSConstants.OUTPUTFILENAME else args(0).concat(NGSConstants.DEFOUTFILEEXT)
+    val outGraphFileName = if args.isEmpty then NGSConstants.OUTPUTFILENAME() else args(0).concat(NGSConstants.DEFOUTFILEEXT)
     val perturbedOutGraphFileName = outGraphFileName.concat(".perturbed")
     logger.info(s"Output graph file is $outputDirectory$outGraphFileName and its perturbed counterpart is $outputDirectory$perturbedOutGraphFileName")
     logger.info(s"The netgraphsim program is run at the host $hostName with the following IP addresses:")

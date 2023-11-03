@@ -20,6 +20,7 @@ val apacheCommonsVersion = "2.13.0"
 val jGraphTlibVersion = "1.5.2"
 val scalaParCollVersion = "1.0.4"
 val guavaAdapter2jGraphtVersion = "1.5.2"
+val circeVersion = "0.14.1"
 
 lazy val commonDependencies = Seq(
   "org.scala-lang.modules" %% "scala-parallel-collections" % scalaParCollVersion,
@@ -27,7 +28,10 @@ lazy val commonDependencies = Seq(
   "org.scalatestplus" %% "mockito-4-2" % "3.2.12.0-RC2" % Test,
   "com.typesafe" % "config" % typeSafeConfigVersion,
   "ch.qos.logback" % "logback-classic" % logbackVersion,
-  "net.bytebuddy" % "byte-buddy" % netBuddyVersion
+  "net.bytebuddy" % "byte-buddy" % netBuddyVersion,
+  "io.circe" %% "circe-core" % circeVersion,
+  "io.circe" %% "circe-generic" % circeVersion,
+  "io.circe" %% "circe-parser" % circeVersion
 ).map(_.exclude("org.slf4j", "*"))
 
 

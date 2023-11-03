@@ -4,6 +4,7 @@ import com.google.common.graph.EndpointPair
 import com.google.common.graph.Graphs
 import com.google.common.graph.MutableValueGraph
 import com.google.common.graph.ValueGraphBuilder
+
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.ByteArrayInputStream
@@ -37,6 +38,7 @@ import NetGraphAlgebraDefs.NetModelAlgebra.outputDirectory
 import Randomizer.SupplierOfRandomness
 import Utilz.CreateLogger
 import Utilz.NGSConstants
+import scala.io.Source
 
 case class NetGraph(sm: NetStateMachine, initState: NodeObject)
      extends GraphStore with Ordered[NetGraph]:
@@ -242,24 +244,36 @@ object NetGraph:
    val logger: Logger = CreateLogger(classOf[NetGraph])
 
    def load(fileName: String, dir: String = outputDirectory): Option[NetGraph] =
-      logger.info(s"Loading the NetGraph from $dir$fileName")
-
-      Try(new FileInputStream(s"$dir$fileName"))
-        .map(fis => (fis, new ObjectInputStream(fis)))
-        .map { (fis, ois) =>
+     if(fileName.endsWith(NGSConstants.DEFOUTFILEEXT)) then
+       logger.info(s"Loading the NetGraph from $dir$fileName")
+       Try(new FileInputStream(s"$dir$fileName"))
+         .map(fis => (fis, new ObjectInputStream(fis)))
+         .map { (fis, ois) =>
            val ng = ois.readObject.asInstanceOf[List[NetGraphComponent]]
            logger.info(s"Deserialized the object $ng")
            ois.close()
            fis.close()
            ng
-        }
-        .toOption
-        .flatMap { lstOfNetComponents =>
+         }
+         .toOption
+         .flatMap { lstOfNetComponents =>
            val nodes = lstOfNetComponents.collect { case node: NodeObject => node }
            val edges = lstOfNetComponents.collect { case edge: Action => edge }
            logger.info(s"Deserialized ${nodes.length} nodes and ${edges.length} edges")
            NetModelAlgebra(nodes, edges)
-        }
+         }
+     else
+       import io.circe._
+       import io.circe.generic.auto._
+       import io.circe.parser._
+       import io.circe.syntax._
+
+       val json = Source.fromFile(s"$dir$fileName").mkString
+       val arr = json.split("\n")
+       val nodes: List[NodeObject] = decode[Set[NodeObject]](arr.head).right.get.toList
+       val edges: List[Action] = decode[Set[Action]](arr.last).right.get.toList
+       logger.info(s"Deserialized ${nodes.length} nodes and ${edges.length} edges from JSON")
+       NetModelAlgebra(nodes, edges)
    end load
 
    @main def runMain_NetGraph(): Unit =
