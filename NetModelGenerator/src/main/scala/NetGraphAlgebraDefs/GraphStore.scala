@@ -22,7 +22,7 @@ import io.circe.syntax.*
 trait GraphStore:
   self: NetGraph =>
     def persist(dir: String = outputDirectory, fileName: String = NGSConstants.OUTPUTFILENAME()): Unit =
-      if(fileName.endsWith(NGSConstants.DEFOUTFILEEXT)) then
+      if(fileName.stripSuffix(".perturbed").endsWith(NGSConstants.DEFOUTFILEEXT)) then
         import java.io._
         import java.util.Base64
         import java.nio.charset.StandardCharsets.UTF_8
