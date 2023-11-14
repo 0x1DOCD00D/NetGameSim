@@ -22,10 +22,22 @@ import io.circe.syntax.*
 
 trait GraphStore:
   self: NetGraph =>
-  def persist(dir: String = outputDirectory, fileName: String = NGSConstants.OUTPUTFILENAME()): Unit =
-    val config = ConfigFactory.load()
-    val outputGraphRepresentation = config.getConfig("NGSimulator").getConfig("OutputGraphRepresentation").getString("contentType")
-    if (outputGraphRepresentation == "json") then
+    def persist(dir: String = outputDirectory, fileName: String = NGSConstants.OUTPUTFILENAME()): Unit =
+      if(fileName.stripSuffix(".perturbed").endsWith(NGSConstants.DEFOUTFILEEXT)) then
+        import java.io._
+        import java.util.Base64
+        import java.nio.charset.StandardCharsets.UTF_8
+
+        val fullGraphAsList: List[NetGraphComponent] = sm.nodes().asScala.toList ::: sm.edges().asScala.toList.map { edge =>
+          sm.edgeValue(edge.source(), edge.target()).get
+        }
+        Try(new FileOutputStream(s"$dir$fileName", false)).map(fos => new ObjectOutputStream(fos)).map { oos =>
+            oos.writeObject(fullGraphAsList)
+            oos.flush()
+            oos.close()
+          }.map(_ => NetGraph.logger.info(s"Successfully persisted the graph to $dir$fileName"))
+          .recover { case e => NetGraph.logger.error(s"Failed to persist the graph to $dir$fileName : ", e) }
+      else
         Try {
           val nodesInGraph: String = sm.nodes().asScala.asJson.noSpaces
           val edgesInGraph: String = sm.edges().asScala.toList.map { edge =>

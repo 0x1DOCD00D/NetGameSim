@@ -244,7 +244,7 @@ object NetGraph:
    val logger: Logger = CreateLogger(classOf[NetGraph])
 
    def load(fileName: String, dir: String = outputDirectory): Option[NetGraph] =
-     if(fileName.endsWith(NGSConstants.DEFOUTFILEEXT)) then
+     if(fileName.stripSuffix(".perturbed").endsWith(NGSConstants.DEFOUTFILEEXT)) then
        logger.info(s"Loading the NetGraph from $dir$fileName")
        Try(new FileInputStream(s"$dir$fileName"))
          .map(fis => (fis, new ObjectInputStream(fis)))
