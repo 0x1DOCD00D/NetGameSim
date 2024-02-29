@@ -4,6 +4,7 @@ import com.google.common.graph.EndpointPair
 import com.google.common.graph.Graphs
 import com.google.common.graph.MutableValueGraph
 import com.google.common.graph.ValueGraphBuilder
+import com.typesafe.config.ConfigFactory
 
 import java.io.BufferedReader
 import java.io.BufferedWriter
@@ -174,6 +175,8 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject)
          Some((randomSuccessor, edge))
 
    def unreachableNodes(): (Set[NodeObject], Int) =
+      val config = ConfigFactory.load()
+      val graphDirectionality = config.getConfig("NGSimulator").getConfig("Graph").getString("directionality")
       var loopsInGraph: Int = 0
 
       @tailrec
@@ -191,9 +194,26 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject)
                    dfs(sm.successors(hd).asScala.toList.filterNot(n => visited.contains(n)) ::: tl,
                        visited + hd) // ++ dfs(tl, visited + hd)
       end dfs
+      @tailrec
+      def dfsUndirected(nodes: List[NodeObject], visited: Set[NodeObject]): Set[NodeObject] = {
+        nodes match {
+          case Nil => visited
+          case hd :: tl if !visited.contains(hd) =>
+            val newVisitedAcc = visited + hd
+            val successors = sm.successors(hd).asScala.toList.filterNot(newVisitedAcc.contains)
+            dfsUndirected(tl ++ successors, newVisitedAcc)
+          case _ :: tl =>
+            dfsUndirected(tl, visited)
+        }
+      }
 
       val (reachableNodes: Set[NodeObject], loops: Int) = {
-        val rns = dfs(sm.successors(initState).asScala.toList, Set())
+        val rns = if (graphDirectionality == "undirected") {
+          dfsUndirected(sm.successors(initState).asScala.toList, Set())
+        } else {
+          val rns = dfs(sm.successors(initState).asScala.toList, Set())
+          dfs(sm.successors(initState).asScala.toList, Set())
+        }
         logger.info(s"DFS: reachable ${rns.size} nodes with $loopsInGraph loops in the graph")
         (rns, loopsInGraph)
       }

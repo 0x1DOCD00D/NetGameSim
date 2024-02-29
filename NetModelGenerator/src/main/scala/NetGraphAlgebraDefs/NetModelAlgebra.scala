@@ -6,6 +6,7 @@ import Utilz.ConfigReader.getConfigEntry
 import Utilz.{CreateLogger, NGSConstants}
 import Utilz.NGSConstants.{ACTIONRANGE, ACTIONRANGEDEFAULT, ACTIONTYPE, ACTIONTYPEDEFAULT, CONNECTEDNESS, CONNECTEDNESSDEFAULT, COSTOFDETECTION, COSTOFDETECTIONDEFAULT, DEFAULTDISSIMULATIONCOEFFICIENT, DEFAULTDISTANCECOEFFICIENT, DEFAULTDISTANCESPREADTHRESHOLD, DEFAULTEDGEPROBABILITY, DEFAULTPERTURBATIONCOEFFICIENT, DESIREDREACHABILITYCOVERAGE, DESIREDREACHABILITYCOVERAGEDEFAULT, DISSIMULATIONCOEFFICIENT, DISTANCECOEFFICIENT, DISTANCESPREADTHRESHOLD, EDGEPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITY, GRAPHWALKNODETERMINATIONPROBABILITYDEFAULT, GRAPHWALKTERMINATIONPOLICY, GRAPHWALKTERMINATIONPOLICYDEFAULT, MALAPPBUDGET, MALAPPBUDGETDEFAULT, MAXBRANCHINGFACTOR, MAXBRANCHINGFACTORDEFAULT, MAXDEPTH, MAXDEPTHDEFAULT, MAXPROPERTIES, MAXPROPERTIESDEFAULT, MAXWALKPATHLENGTHCOEFF, MAXWALKPATHLENGTHCOEFFDEFAULT, NUMBEROFEXPERIMENTS, NUMBEROFEXPERIMENTSDEFAULT, PERTURBATIONCOEFFICIENT, PROPVALUERANGE, PROPVALUERANGEDEFAULT, SEED, SERVICEPENALTY, SERVICEPENALTYDEFAULT, SERVICEREWARD, SERVICEREWARDDEFAULT, SERVICEREWARDPROBABILITY, SERVICEREWARDPROBABILITYDEFAULT, STATESTOTAL, STATESTOTALDEFAULT, TARGETAPPHIGHPENALTY, TARGETAPPHIGHPENALTYDEFAULT, TARGETAPPLOWPENALTY, TARGETAPPLOWPENALTYDEFAULT, TARGETAPPSCORE, TARGETAPPSCOREDEFAULT, VALUABLEDATAPROBABILITY, VALUABLEDATAPROBABILITYDEFAULT, WALKS, WALKSDEFAULT}
 import com.google.common.graph.*
+import com.typesafe.config.ConfigFactory
 import org.slf4j.Logger
 
 import java.io.File
@@ -32,7 +33,15 @@ class NetModel extends NetGraphConnectednessFinalizer:
   require(connectedness >= 0 && connectedness <= statesTotal, "The connectedness must be between 0 and the total number of states")
   require(desiredReachabilityCoverage >= 0 && desiredReachabilityCoverage <= 1, "The desired reachability coverage must be between 0 and 1")
 
-  private [this] val stateMachine: NetStateMachine = ValueGraphBuilder.directed().build()
+  private[this] val config = ConfigFactory.load()
+  private[this] val graphDirectionality = config.getConfig("NGSimulator").getConfig("Graph").getString("directionality")
+  private[this] val stateMachine: NetStateMachine = {
+    if (graphDirectionality == "directed") {
+      ValueGraphBuilder.directed().build[NodeObject, Action]()
+    } else {
+      ValueGraphBuilder.undirected().build[NodeObject, Action]()
+    }
+  }
   val modelUUID:String = java.util.UUID.randomUUID.toString
 
   private def createNodes(): Unit =
@@ -89,7 +98,7 @@ class NetModel extends NetGraphConnectednessFinalizer:
       logger.info(s"$msg: ${progress * 100 / total}%")
     ()
   end reportProgress
-  
+
   def generateModel(forceReachability: Boolean = false): Option[NetGraph] =
     logger.info(s"Generating a random graph with $statesTotal nodes and ${if forceReachability then s"ensuring ${desiredReachabilityCoverage*100}%" else "random"} reachability")
     createNodes()
