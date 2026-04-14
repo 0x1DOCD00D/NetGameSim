@@ -23,6 +23,14 @@ import io.circe.syntax.*
 
 trait GraphStore:
   self: NetGraph =>
+
+  // Persists the graph to disk in the format specified by the OutputGraphRepresentation.contentType
+  // configuration parameter. Supported formats:
+  //   - "json"  : Circe JSON with nodes on the first line and edges on the second
+  //   - "yaml"  : Human-readable YAML listing all nodes and edges with their properties
+  //   - "ngs"   : Java binary serialization (default)
+  // The graph directionality (directed/undirected) is read from the Graph.directionality
+  // config and controls which Guava API is used to retrieve edge values.
   def persist(dir: String = outputDirectory, fileName: String = NGSConstants.OUTPUTFILENAME()): Unit =
     val config = ConfigFactory.load()
     val outputGraphRepresentation = config.getConfig("NGSimulator").getConfig("OutputGraphRepresentation").getString("contentType")
@@ -48,6 +56,53 @@ trait GraphStore:
           file.close()
         }.map(_ => NetGraph.logger.info(s"Successfully persisted the graph in json to $dir$fileName"))
           .recover { case e => NetGraph.logger.error(s"Failed to persist the graph in json to $dir$fileName : ", e) }
+    else if (outputGraphRepresentation == "yaml") then
+        // YAML export: writes a human-readable representation of the graph that is easier
+        // to inspect visually than binary .ngs or dense JSON. The format lists every node
+        // with its properties followed by every edge with its action attributes. This uses
+        // the same directionality-aware edge value retrieval as the JSON and binary formats.
+        Try {
+          val sb = new StringBuilder
+          sb.append("# NetGameSim graph exported in YAML format\n")
+          sb.append(s"directionality: $graphDirectionality\n")
+          sb.append(s"nodeCount: ${sm.nodes().size()}\n")
+          sb.append(s"edgeCount: ${sm.edges().size()}\n")
+          sb.append("nodes:\n")
+          sm.nodes().asScala.toList.sortBy(_.id).foreach { node =>
+            sb.append(s"  - id: ${node.id}\n")
+            sb.append(s"    children: ${node.children}\n")
+            sb.append(s"    props: ${node.props}\n")
+            sb.append(s"    currentDepth: ${node.currentDepth}\n")
+            sb.append(s"    propValueRange: ${node.propValueRange}\n")
+            sb.append(s"    maxDepth: ${node.maxDepth}\n")
+            sb.append(s"    maxBranchingFactor: ${node.maxBranchingFactor}\n")
+            sb.append(s"    maxProperties: ${node.maxProperties}\n")
+            sb.append(s"    storedValue: ${node.storedValue}\n")
+            sb.append(s"    valuableData: ${node.valuableData}\n")
+          }
+          sb.append("edges:\n")
+          sm.edges().asScala.toList.foreach { edge =>
+            val edgeValue = (if (graphDirectionality == "undirected") then
+              sm.edgeValue(edge.nodeU(), edge.nodeV())
+            else
+              sm.edgeValue(edge.source(), edge.target())
+            ).toScala
+            edgeValue match {
+              case Some(action) =>
+                sb.append(s"  - actionType: ${action.actionType}\n")
+                sb.append(s"    fromId: ${action.fromId}\n")
+                sb.append(s"    toId: ${action.toId}\n")
+                sb.append(s"    cost: ${action.cost}\n")
+                sb.append(s"    resultingValue: ${action.resultingValue.getOrElse("null")}\n")
+              case None =>
+                NetGraph.logger.warn("Encountered edge without a value during YAML export, skipping")
+            }
+          }
+          val file = new FileWriter(s"$dir$fileName")
+          file.write(sb.toString)
+          file.close()
+        }.map(_ => NetGraph.logger.info(s"Successfully persisted the graph in yaml to $dir$fileName"))
+          .recover { case e => NetGraph.logger.error(s"Failed to persist the graph in yaml to $dir$fileName : ", e) }
     else {
       import java.io._
       import java.util.Base64

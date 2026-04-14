@@ -243,12 +243,24 @@ object GraphPerturbationAlgebra:
       (acc, elem) => acc ::: List(s"\t\t${elem._2.asInstanceOf[EdgeRemoved].edge.fromNode.id}: ${elem._2.asInstanceOf[EdgeRemoved].edge.toNode.id}\n")
     )
 
+    // Write the modification record to disk. The outer Try handles file-open failures
+    // (e.g. invalid path, permission denied) and the inner Try handles write failures
+    // (e.g. disk full, I/O error mid-write). Both cases return a Left with the error
+    // message so callers can decide how to react.
     Try(new PrintWriter(new File(fileName))) match
       case Success(fh) =>
-        //TODO: add write failure handler
-        try fh.write(allNodesMod.mkString.concat(allEdgesMod.mkString))
-        finally fh.close()
-        Right(())
+        try
+          fh.write(allNodesMod.mkString.concat(allEdgesMod.mkString))
+          if fh.checkError() then
+            fh.close()
+            Left(s"Write to $fileName failed: PrintWriter encountered an I/O error")
+          else
+            fh.close()
+            Right(())
+        catch
+          case ex: Exception =>
+            Try(fh.close())
+            Left(s"Write to $fileName failed: ${ex.getMessage}")
       case Failure(e) => Left(e.getMessage)
 
 
