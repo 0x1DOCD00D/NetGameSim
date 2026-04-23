@@ -1,6 +1,6 @@
 package NetGraphAlgebraDefs
 
-import java.io.File
+import java.io.{File, PrintWriter}
 import org.apache.commons.io.FileUtils
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -42,5 +42,32 @@ class NetGraphTest extends AnyFlatSpec with Matchers {
        case Success(value) => logger.info(s"Deleted file ${outputDirectory + "testGraph_2.ser"}")
     if graph2.isEmpty then assert(true, "Serialized graph not loaded")
     else graph2.get shouldEqual graph
+  }
+
+  // Regression: the JSON load path used arr.head / arr.last / .right.get,
+  // which threw on empty files or malformed JSON instead of returning None.
+  // See plan file bug #4.
+  it should "return None when the JSON file is empty rather than throwing" in {
+    val fileName = "empty_graph.json"
+    val fullPath = outputDirectory + fileName
+    new File(outputDirectory).mkdirs()
+    val pw = new PrintWriter(new File(fullPath))
+    pw.write("")
+    pw.close()
+    val result = NetGraph.load(fileName, outputDirectory)
+    Try(FileUtils.forceDelete(FileUtils.getFile(fullPath)))
+    result shouldBe None
+  }
+
+  it should "return None when the JSON file is malformed rather than throwing" in {
+    val fileName = "malformed_graph.json"
+    val fullPath = outputDirectory + fileName
+    new File(outputDirectory).mkdirs()
+    val pw = new PrintWriter(new File(fullPath))
+    pw.write("not json\nalso not json\n")
+    pw.close()
+    val result = NetGraph.load(fileName, outputDirectory)
+    Try(FileUtils.forceDelete(FileUtils.getFile(fullPath)))
+    result shouldBe None
   }
 }

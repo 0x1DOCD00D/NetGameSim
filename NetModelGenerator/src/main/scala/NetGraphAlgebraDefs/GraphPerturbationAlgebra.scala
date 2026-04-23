@@ -144,9 +144,9 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
       if dissimulate then doTheEdge(node, allNodes.filterNot(nodesLambda).toArray[NodeObject], modifyEdge)
       else
         action match
-          case ACTIONS.ADDEDGE => doTheEdge(node, allNodes.filter(nodesLambda).toArray[NodeObject], addEdge)
-          case ACTIONS.REMOVEEDGE => doTheEdge(node, allNodes.filterNot(nodesLambda).toArray[NodeObject], removeEdge)
-          case ACTIONS.MODIFYEDGE => doTheEdge(node, allNodes.filterNot(nodesLambda).toArray[NodeObject], modifyEdge)
+          case ACTIONS.ADDEDGE => doTheEdge(node, allNodes.filterNot(nodesLambda).toArray[NodeObject], addEdge)
+          case ACTIONS.REMOVEEDGE => doTheEdge(node, allNodes.filter(nodesLambda).toArray[NodeObject], removeEdge)
+          case ACTIONS.MODIFYEDGE => doTheEdge(node, allNodes.filter(nodesLambda).toArray[NodeObject], modifyEdge)
           case _ =>
             logger.error(s"Invalid action $action")
             Vector()
@@ -192,7 +192,8 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
         Vector()
       else
         Vector((OriginalNetComponent(node), EdgeModified(edge2Modify.get))) ++ removeEdge(node, chosenNode) ++ addEdge(node, chosenNode)
-    else modifyEdge(chosenNode, node)
+    else if newModel.sm.hasEdgeConnecting(chosenNode, node) then modifyEdge(chosenNode, node)
+    else Vector()
 
 object GraphPerturbationAlgebra:
   trait Perturbation

@@ -17,4 +17,13 @@ class SupplierOfRandomnessTest extends AnyFlatSpec with Matchers {
     intval should be <= 20
     intval should be >= 10
   }
+
+  // Regression: randInts previously hardcoded howMany=1 regardless of the
+  // caller's requested count. See plan file bug #3.
+  it should "return a vector whose length matches howManyNumbers" in {
+    val ints = SupplierOfRandomness.randInts(10, pminv = 0, pmaxv = 100)
+    ints.length shouldBe 10
+    all(ints) should be >= 0
+    all(ints) should be <= 100
+  }
 }

@@ -12,8 +12,10 @@ import Utilz.NGSConstants.{DEFAULTEDGEPROBABILITY, EDGEPROBABILITY}
 import com.google.common.graph.{MutableValueGraph, ValueGraphBuilder}
 import org.mockito.Mockito.{mock, when}
 import org.scalatest.PrivateMethodTester
+import org.scalatest.concurrent.TimeLimits.failAfter
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.slf4j.Logger
@@ -185,6 +187,36 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
         graph.sm.hasEdgeConnecting(node1, node2) shouldBe true
         graph.sm.hasEdgeConnecting(node2, node1) shouldBe true
       }
+    }
+
+    // Regression: modifyEdge used to infinite-loop when called with two nodes
+    // that had no edge in either direction (no base case on the else branch).
+    // See plan file bug #2. failAfter guards against a regression causing
+    // the test suite itself to hang.
+    it should s"terminate modifyEdge when no edge exists between the two nodes in $graphType graph" in {
+      val graph = createGraph()
+      val algebra = new GraphPerturbationAlgebra(graph)
+      val theFunc = PrivateMethod[ModificationRecord](Symbol(MODIFYEDGEMETHOD))
+      graph.sm.hasEdgeConnecting(node1, node3) shouldBe false
+      graph.sm.hasEdgeConnecting(node3, node1) shouldBe false
+      val modificationRecord: ModificationRecord = failAfter(5.seconds) {
+        algebra invokePrivate theFunc(node1, node3)
+      }
+      modificationRecord shouldBe Vector()
+    }
+
+    // Regression: removeEdge already had a base case, but pair it with the
+    // above to document that both functions must be safe against no-edge inputs.
+    it should s"return empty when removeEdge is called on two nodes with no edge in $graphType graph" in {
+      val graph = createGraph()
+      val algebra = new GraphPerturbationAlgebra(graph)
+      val theFunc = PrivateMethod[ModificationRecord](Symbol(REMOVEEDGEMETHOD))
+      graph.sm.hasEdgeConnecting(node1, node3) shouldBe false
+      graph.sm.hasEdgeConnecting(node3, node1) shouldBe false
+      val modificationRecord: ModificationRecord = failAfter(5.seconds) {
+        algebra invokePrivate theFunc(node1, node3)
+      }
+      modificationRecord shouldBe Vector()
     }
   }
 }
