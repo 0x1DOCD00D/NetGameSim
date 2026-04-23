@@ -53,7 +53,12 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
     end if
 
   private def perturbNode(node: NodeObject, dissimulate: Boolean = false): ModificationRecord =
-    val op2do: ACTIONS = ACTIONS.fromOrdinal(SupplierOfRandomness.onDemandInt(repeatable=true, pmaxv = ACTIONS.values.map(_.ordinal).toList.max, pminv = 0))
+    // pmaxv is exclusive in onDemandInt (it delegates to ThreadLocalRandom.nextInt
+    // / Random.between, both of which return values in [origin, bound)). Passing
+    // the largest ordinal therefore produced values in [0, lastOrdinal), which
+    // excluded the final enum case (MODIFYEDGE). We want values in
+    // [0, numberOfCases), so pmaxv must be ACTIONS.values.length.
+    val op2do: ACTIONS = ACTIONS.fromOrdinal(SupplierOfRandomness.onDemandInt(repeatable=true, pmaxv = ACTIONS.values.length, pminv = 0))
     if dissimulate then
       logger.debug(s"Dissimulating node $node")
       modifyNode(node)

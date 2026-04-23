@@ -110,7 +110,12 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject)
             sm.putEdgeValue(rn, unr, createAction(rn, unr))
 
             val nodesLength = orphanNodes.size
-            val totalCombinationsOfNodes = nodesLength * nodesLength
+            // Widen to Long before the multiplication. With only Int operands
+            // this overflows silently once nodesLength >= sqrt(Int.MaxValue) ~=
+            // 46341, producing garbage that would then be passed to randProbs
+            // (which expects a Long howManyNumbers). See the matching fix in
+            // NetModelAlgebra.generateModel.
+            val totalCombinationsOfNodes: Long = nodesLength.toLong * nodesLength.toLong
             val nodes2AddEdges: ParSeq[(Int, Int)] = SupplierOfRandomness
               .randProbs(totalCombinationsOfNodes)()
               .par
