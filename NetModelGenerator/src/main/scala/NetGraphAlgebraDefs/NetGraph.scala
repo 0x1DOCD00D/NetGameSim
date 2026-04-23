@@ -208,10 +208,14 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject)
       }
 
       val (reachableNodes: Set[NodeObject], loops: Int) = {
+        // The directed branch previously ran dfs twice: once assigned to a
+        // local `val rns` and once as the block's trailing expression. Because
+        // a Scala block returns its last expression, the first call's result
+        // was silently discarded, doubling the reachability work on every
+        // call. We now run dfs exactly once and use its result.
         val rns = if (graphDirectionality == "undirected") {
           dfsUndirected(sm.successors(initState).asScala.toList, Set())
         } else {
-          val rns = dfs(sm.successors(initState).asScala.toList, Set())
           dfs(sm.successors(initState).asScala.toList, Set())
         }
         logger.info(s"DFS: reachable ${rns.size} nodes with $loopsInGraph loops in the graph")
