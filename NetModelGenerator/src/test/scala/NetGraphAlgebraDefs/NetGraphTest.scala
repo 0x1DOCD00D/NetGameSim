@@ -46,7 +46,6 @@ class NetGraphTest extends AnyFlatSpec with Matchers {
 
   // Regression: the JSON load path used arr.head / arr.last / .right.get,
   // which threw on empty files or malformed JSON instead of returning None.
-  // See plan file bug #4.
   it should "return None when the JSON file is empty rather than throwing" in {
     val fileName = "empty_graph.json"
     val fullPath = outputDirectory + fileName

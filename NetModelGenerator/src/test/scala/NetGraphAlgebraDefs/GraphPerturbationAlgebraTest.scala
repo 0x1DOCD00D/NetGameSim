@@ -191,8 +191,7 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
 
     // Regression: modifyEdge used to infinite-loop when called with two nodes
     // that had no edge in either direction (no base case on the else branch).
-    // See plan file bug #2. failAfter guards against a regression causing
-    // the test suite itself to hang.
+    // failAfter guards against a regression causing the suite itself to hang.
     it should s"terminate modifyEdge when no edge exists between the two nodes in $graphType graph" in {
       val graph = createGraph()
       val algebra = new GraphPerturbationAlgebra(graph)
