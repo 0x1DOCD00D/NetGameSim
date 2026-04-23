@@ -128,7 +128,16 @@ trait GraphStore:
   def toDotVizFormat(name: String, dir: String = outputDirectory, fileName: String, outputImageFormat: Format = Format.DOT): Unit =
     val config = ConfigFactory.load()
     val graphDirectionality = config.getConfig("NGSimulator").getConfig("Graph").getString("directionality")
-    val nodes: List[NodeObject] = initState :: sm.nodes().asScala.toList
+    // The init state is always added to the state machine by
+    // NetModelAlgebra.addInitState, so it is already present in sm.nodes().
+    // The previous code prepended it unconditionally which produced a
+    // duplicate entry. It worked only because the subsequent foldLeft keys
+    // the nodes by id, silently collapsing the duplicate. We avoid the
+    // duplicate up-front and keep a defensive fallback for graphs where
+    // initState is not present (e.g. hand-constructed test fixtures).
+    val smNodes: List[NodeObject] = sm.nodes().asScala.toList
+    val nodes: List[NodeObject] =
+      if smNodes.contains(initState) then smNodes else initState :: smNodes
     if nodes.count(_.id == 0) < 1 then
       logger.error("The graph does not contain a start node with id 0")
     else if (graphDirectionality == "directed") then
