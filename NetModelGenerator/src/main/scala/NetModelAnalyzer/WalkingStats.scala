@@ -36,12 +36,17 @@ class WalkingStats(graph: NetGraph, paths: LISTOFWALKEDPATHS):
     }
   end graphCoverage
 
+  // Computes the percentage of nodes and edges visited by the random walks.
+  // The node coverage is (visited nodes / total nodes) * 100 and
+  // the edge coverage is (visited edges / total edges) * 100.
   def coveragePercentages: (Float, Float) =
     val graphCov = graphCoverage()
     val coveredNodes = graphCov.count((k, v) => v > 0 && k.isInstanceOf[NodeObject])
     val coveredEdges = graphCov.count((k, v) => v > 0 && k.isInstanceOf[Action])
     val nodeCoverage = f"${100f*coveredNodes.toFloat/graphNodes.size}%4.2f".toFloat
-    val edgeCoverage = f"${100f*coveredNodes.toFloat/graphEdges.size}%4.2f".toFloat
+    // Fix: was incorrectly using coveredNodes instead of coveredEdges in the numerator,
+    // which produced wrong edge coverage percentages in all downstream analysis.
+    val edgeCoverage = f"${100f*coveredEdges.toFloat/graphEdges.size}%4.2f".toFloat
     (nodeCoverage, edgeCoverage)
   end coveragePercentages
 
