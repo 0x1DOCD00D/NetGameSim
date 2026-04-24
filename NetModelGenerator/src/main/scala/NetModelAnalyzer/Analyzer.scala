@@ -32,7 +32,12 @@ object Analyzer:
     val jg: Graph[NodeObject, Action] = new MutableValueGraphAdapter(gc.sm, createAction(gc.initState,gc.initState), (x: Action) => x.cost).asInstanceOf[Graph[NodeObject, Action]]
     val inspector = new KosarajuStrongConnectivityInspector(jg)
     val components = inspector.stronglyConnectedSets().asScala.toList.filter(_.size > 1)
-    logger.info(s"Detected ${components.map(_.size)} cycles")
+    // Previously: logger.info(s"Detected ${components.map(_.size)} cycles")
+    // That interpolated a List[Int] into the log message, producing output
+    // like "Detected List(5, 3, 2) cycles" instead of a count. We now log
+    // the number of detected strongly-connected components (i.e. cycles)
+    // alongside their individual sizes for diagnostic context.
+    logger.info(s"Detected ${components.size} cycles with sizes ${components.map(_.size).mkString("[", ", ", "]")}")
 
     val newg = g.copy
     newg.sm.removeNode(newg.sm.nodes().asScala.find(_.id == 3).get)
