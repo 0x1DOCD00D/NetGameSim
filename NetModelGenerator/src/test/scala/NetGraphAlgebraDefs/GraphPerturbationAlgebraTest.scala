@@ -1,7 +1,7 @@
 package NetGraphAlgebraDefs
 
 import NetGraphAlgebraDefs.NetModelAlgebra.{mapAppBudget, targetAppScore}
-import NetGraphAlgebraDefs.GraphPerturbationAlgebra.{EdgeAdded, EdgeRemoved, ModificationRecord, NodeAdded, NodeModified, NodeRemoved, OriginalNetComponent, inverseMR}
+import NetGraphAlgebraDefs.GraphPerturbationAlgebra.{ACTIONS, EdgeAdded, EdgeRemoved, ModificationRecord, NodeAdded, NodeModified, NodeRemoved, OriginalNetComponent, inverseMR}
 import NetGraphAlgebraDefs.GraphPerturbationAlgebraTest.{ADDEDGEMETHOD, ADDNODEMETHOD, MODIFYEDGEMETHOD, MODIFYNODEMETHOD, REMOVEEDGEMETHOD, REMOVENODEMETHOD}
 import NetModelAnalyzer.Budget.{MalAppBudget, TargetAppScore}
 import NetModelAnalyzer.{CostRewardCalculator, PATHRESULT, RandomWalker}
@@ -185,6 +185,39 @@ class GraphPerturbationAlgebraTest extends AnyFlatSpec with Matchers with Mockit
         graph.sm.hasEdgeConnecting(node1, node2) shouldBe true
         graph.sm.hasEdgeConnecting(node2, node1) shouldBe true
       }
+    }
+
+    // Regression test for the inverted-filter bug in operationOnEdges. Prior
+    // to the fix, REMOVEEDGE called doTheEdge with allNodes.filterNot(nodesLambda)
+    // — i.e. the nodes that were NOT connected to the target. Because
+    // removeEdge short-circuits when no edge connects the pair, every
+    // invocation became a silent no-op: the returned ModificationRecord
+    // was empty and the graph was never actually mutated.
+    //
+    // With the fix, REMOVEEDGE uses allNodes.filter(nodesLambda), which
+    // yields the nodes that ARE connected to the target, so removeEdge
+    // actually has an edge to drop. For the test graph {node1->node2,
+    // node2->node3}, the only node connected to node1 is node2, so this
+    // test is deterministic regardless of the random selection in doTheEdge.
+    it should s"actually remove an edge via operationOnEdges on a $graphType graph" in {
+      val graph = createGraph()
+      graph.sm.edges().size shouldBe 2
+      val algebra = new GraphPerturbationAlgebra(graph)
+      val theFunc = PrivateMethod[ModificationRecord](Symbol("operationOnEdges"))
+      val modificationRecord: ModificationRecord = algebra invokePrivate theFunc(node1, ACTIONS.REMOVEEDGE, false)
+
+      // The modification record must contain exactly one EdgeRemoved entry —
+      // the node1->node2 edge. Under the old (buggy) filterNot the record
+      // would be empty because removeEdge could not find the edge it was
+      // handed (the pair was always unconnected by construction).
+      modificationRecord should not be empty
+      modificationRecord.exists(_._2.isInstanceOf[EdgeRemoved]) shouldBe true
+      // And the graph state must actually have one fewer edge.
+      graph.sm.edges().size shouldBe 1
+      // Specifically, node1->node2 is gone but node2->node3 remains.
+      graph.sm.hasEdgeConnecting(node1, node2) shouldBe false
+      graph.sm.hasEdgeConnecting(node2, node3) shouldBe true
+      logger.info(s"REMOVEEDGE regression passed: graph has ${graph.sm.edges().size} edge(s) after the call")
     }
   }
 }

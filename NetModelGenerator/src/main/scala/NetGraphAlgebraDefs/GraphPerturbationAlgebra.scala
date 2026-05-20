@@ -141,12 +141,29 @@ class GraphPerturbationAlgebra(originalModel: NetGraph):
         newModel.sm.hasEdgeConnecting(otherNode, node))
     if containsNode(node) then
       val allNodes: List[NodeObject] = newModel.sm.nodes().asScala.toList
+      // `nodesLambda(otherNode)` returns true when `otherNode` is already
+      // connected to `node` (and is not `node` itself). The three edge
+      // actions must therefore select candidates as follows:
+      //   * ADDEDGE    -> nodes NOT connected to `node` (filterNot) so a
+      //                   genuinely new edge can be created.
+      //   * REMOVEEDGE -> nodes that ARE connected to `node` (filter) so
+      //                   there is actually an edge to drop.
+      //   * MODIFYEDGE -> nodes that ARE connected to `node` (filter) so
+      //                   there is an existing edge to mutate.
+      // Previously ADDEDGE used `filter` and REMOVEEDGE/MODIFYEDGE used
+      // `filterNot`, i.e. the filters were inverted. REMOVEEDGE therefore
+      // became a silent no-op (it searched for an edge on a node that had
+      // no edge to drop), MODIFYEDGE could infinite-recurse on undirected
+      // graphs (the recursive fallback in `modifyEdge` keeps swapping the
+      // pair, and for undirected edges the "other direction" is the same
+      // non-existent edge), and ADDEDGE would fall through `addEdge`'s
+      // replacement branch — effectively doing a modify instead of an add.
       if dissimulate then doTheEdge(node, allNodes.filterNot(nodesLambda).toArray[NodeObject], modifyEdge)
       else
         action match
-          case ACTIONS.ADDEDGE => doTheEdge(node, allNodes.filter(nodesLambda).toArray[NodeObject], addEdge)
-          case ACTIONS.REMOVEEDGE => doTheEdge(node, allNodes.filterNot(nodesLambda).toArray[NodeObject], removeEdge)
-          case ACTIONS.MODIFYEDGE => doTheEdge(node, allNodes.filterNot(nodesLambda).toArray[NodeObject], modifyEdge)
+          case ACTIONS.ADDEDGE    => doTheEdge(node, allNodes.filterNot(nodesLambda).toArray[NodeObject], addEdge)
+          case ACTIONS.REMOVEEDGE => doTheEdge(node, allNodes.filter(nodesLambda).toArray[NodeObject],    removeEdge)
+          case ACTIONS.MODIFYEDGE => doTheEdge(node, allNodes.filter(nodesLambda).toArray[NodeObject],    modifyEdge)
           case _ =>
             logger.error(s"Invalid action $action")
             Vector()
