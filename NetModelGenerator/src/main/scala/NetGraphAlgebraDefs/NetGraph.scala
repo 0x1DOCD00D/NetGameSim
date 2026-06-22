@@ -65,21 +65,17 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject)
            logger.error(s"Node ${node.id} is not in the other graph")
            acc + 1
       } + thisEdges.foldLeft(0) { case (acc, e) =>
-        val found = thatEdges.find(n => n == e)
-        if found.isDefined && e.nodeU() == thatEdges.find(n => n == e).get.nodeU() &&
-           e.nodeV() == thatEdges.find(n => n == e).get.nodeV()
-        then acc
-        else
-           logger.error(s"Edge ${e.nodeU().id} -> ${e.nodeV().id} is not in the other graph")
-           acc + 1
+        thatEdges.find(n => n == e) match
+          case Some(f) if e.nodeU() == f.nodeU() && e.nodeV() == f.nodeV() => acc
+          case _ =>
+            logger.error(s"Edge ${e.nodeU().id} -> ${e.nodeV().id} is not in the other graph")
+            acc + 1
       } + thatEdges.foldLeft(0) { case (acc, e) =>
-        val found = thisEdges.find(n => n == e)
-        if found.isDefined && e.nodeU() == thisEdges.find(n => n == e).get.nodeU() &&
-           e.nodeV() == thisEdges.find(n => n == e).get.nodeV()
-        then acc
-        else
-           logger.error(s"Edge ${e.nodeU().id} -> ${e.nodeV().id} is not in the other graph")
-           acc + 1
+        thisEdges.find(n => n == e) match
+          case Some(f) if e.nodeU() == f.nodeU() && e.nodeV() == f.nodeV() => acc
+          case _ =>
+            logger.error(s"Edge ${e.nodeU().id} -> ${e.nodeV().id} is not in the other graph")
+            acc + 1
       }
    end compare
 
@@ -211,7 +207,6 @@ case class NetGraph(sm: NetStateMachine, initState: NodeObject)
         val rns = if (graphDirectionality == "undirected") {
           dfsUndirected(sm.successors(initState).asScala.toList, Set())
         } else {
-          val rns = dfs(sm.successors(initState).asScala.toList, Set())
           dfs(sm.successors(initState).asScala.toList, Set())
         }
         logger.info(s"DFS: reachable ${rns.size} nodes with $loopsInGraph loops in the graph")
@@ -288,12 +283,25 @@ object NetGraph:
        import io.circe.parser._
        import io.circe.syntax._
 
-       val json = Source.fromFile(s"$dir$fileName").mkString
-       val arr = json.split("\n")
-       val nodes: List[NodeObject] = decode[Set[NodeObject]](arr.head).right.get.toList
-       val edges: List[Action] = decode[Set[Action]](arr.last).right.get.toList
-       logger.info(s"Deserialized ${nodes.length} nodes and ${edges.length} edges from JSON")
-       NetModelAlgebra(nodes, edges)
+       val decoded: Try[(List[NodeObject], List[Action])] = Try {
+         Using.resource(Source.fromFile(s"$dir$fileName"))(_.mkString)
+       }.flatMap { json =>
+         val arr = json.split("\n").filter(_.nonEmpty)
+         if arr.length < 2 then
+           Failure(new IllegalArgumentException(s"JSON file $dir$fileName must contain at least two non-empty lines (nodes, edges)"))
+         else
+           for
+             nodes <- decode[Set[NodeObject]](arr.head).toTry
+             edges <- decode[Set[Action]](arr.last).toTry
+           yield (nodes.toList, edges.toList)
+       }
+       decoded match
+         case Success((nodes, edges)) =>
+           logger.info(s"Deserialized ${nodes.length} nodes and ${edges.length} edges from JSON")
+           NetModelAlgebra(nodes, edges)
+         case Failure(ex) =>
+           logger.error(s"Failed to load JSON graph from $dir$fileName: ${ex.getMessage}")
+           None
    end load
 
    @main def runMain_NetGraph(): Unit =

@@ -43,10 +43,10 @@ object SupplierOfRandomness:
     if pminv < 0 || pmaxv < 0 || pminv >= pmaxv then logger.error(s"randInts is called with incorrect parameters: pminv=$pminv, pmaxv=$pmaxv")
     val minv = if pminv < 0 then math.abs(pminv) else pminv
     val maxv = if pmaxv < 0 then math.abs(pmaxv) else pmaxv
-    if minv < maxv then UniformProbGenerator.generateRandom(1, true, repeatable)(minv, maxv).asInstanceOf[Vector[Int]]
-      else if minv > maxv then UniformProbGenerator.generateRandom(1, true, repeatable)(maxv, minv).asInstanceOf[Vector[Int]]
-      else if minv == maxv && maxv < Int.MaxValue then UniformProbGenerator.generateRandom(1, true, repeatable)(minv, maxv + 1).asInstanceOf[Vector[Int]]
-      else if minv == maxv && minv > 0 then UniformProbGenerator.generateRandom(1, true, repeatable)(minv - 1, maxv).asInstanceOf[Vector[Int]]
-      else UniformProbGenerator.generateRandom(1, true, repeatable).asInstanceOf[Vector[Int]]
+    if minv < maxv then UniformProbGenerator.generateRandom(howManyNumbers, true, repeatable)(minv, maxv).asInstanceOf[Vector[Int]]
+      else if minv > maxv then UniformProbGenerator.generateRandom(howManyNumbers, true, repeatable)(maxv, minv).asInstanceOf[Vector[Int]]
+      else if minv == maxv && maxv < Int.MaxValue then UniformProbGenerator.generateRandom(howManyNumbers, true, repeatable)(minv, maxv + 1).asInstanceOf[Vector[Int]]
+      else if minv == maxv && minv > 0 then UniformProbGenerator.generateRandom(howManyNumbers, true, repeatable)(minv - 1, maxv).asInstanceOf[Vector[Int]]
+      else UniformProbGenerator.generateRandom(howManyNumbers, true, repeatable)(0, Int.MaxValue).asInstanceOf[Vector[Int]]
   end randInts
   def randProbs(howManyNumbers: Long)(repeatable: Boolean = true): Vector[Double] = UniformProbGenerator.generateRandom(howManyNumbers, false, repeatable)().asInstanceOf[Vector[Double]]
