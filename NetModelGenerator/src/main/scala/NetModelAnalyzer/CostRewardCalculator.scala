@@ -62,7 +62,17 @@ object CostRewardCalculator extends CostRewardFunction:
     (costs:COSTTUPLE) => {
       import NetGraphAlgebraDefs.NetModelAlgebra.*
       val pathLength = v1.size.toDouble
-      val avgWeight: Double = v1.map(_._2.asInstanceOf[Action].cost).sum / pathLength
+      // Guard against an empty PATHRESULT. RandomWalker.trimPath can produce
+      // an empty list when a random walk terminates immediately at a
+      // TerminalNode — the only element gets dropped, leaving an empty path.
+      // Without this guard the expression below evaluated to `sum / 0.0`,
+      // yielding NaN. That NaN then flowed into MalAppBudget.reward/penalty
+      // and silently poisoned every subsequent budget/score calculation
+      // for the whole run. When the path is empty there is nothing to
+      // reward or penalize, so avgWeight is simply 0.
+      val avgWeight: Double =
+        if pathLength > 0d then v1.map(_._2.asInstanceOf[Action].cost).sum / pathLength
+        else 0d
 
       val (newCost:COSTTUPLE, dc:DetectedModifiedComponents) = computeCosts4Walk(v1, costs, v3)
       if math.abs(newCost._2.toDouble - costs._2.toDouble) > NGSConstants.EPSILON then
