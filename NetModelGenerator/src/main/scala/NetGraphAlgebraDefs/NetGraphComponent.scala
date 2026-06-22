@@ -28,6 +28,14 @@ case class NodeObject(id: Int, children: Int, props: Int, currentDepth: Int = 1,
       ))
     else List.empty
   def childrenCount: Int = children + childrenObjects.map(_.childrenCount).sum
+  // Produces a modified version of this node for perturbation. The positional
+  // arguments must match the NodeObject constructor order:
+  //   id, children, props, currentDepth, propValueRange, maxDepth,
+  //   maxBranchingFactor, maxProperties, storedValue, valuableData.
+  // Position 7 is maxBranchingFactor — it must be randomized against this
+  // node's own maxBranchingFactor, NOT propValueRange. Previously the code
+  // passed propValueRange here by mistake, which silently skewed every
+  // perturbed node's branching factor toward an unrelated range.
   def modify: NodeObject =
     NodeObject(id,
       children,
@@ -35,7 +43,7 @@ case class NodeObject(id: Int, children: Int, props: Int, currentDepth: Int = 1,
       currentDepth,
       SupplierOfRandomness.onDemandInt(pmaxv = propValueRange, repeatable = false),
       maxDepth,
-      SupplierOfRandomness.onDemandInt(pmaxv = propValueRange, repeatable = false),
+      SupplierOfRandomness.onDemandInt(pmaxv = maxBranchingFactor, repeatable = false),
       maxProperties,
       SupplierOfRandomness.onDemandReal(repeatable = false),
       valuableData
