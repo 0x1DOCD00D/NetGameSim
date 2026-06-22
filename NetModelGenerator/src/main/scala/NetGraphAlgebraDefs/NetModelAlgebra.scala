@@ -109,7 +109,13 @@ class NetModel extends NetGraphConnectednessFinalizer:
       logger.error(s"Too many nodes to generate edges for: $nodesLength")
       None
     else
-      val totalCombinationsOfNodes:Long = nodesLength * nodesLength
+      // The upstream guard on line 108 prevents nodesLength^2 from overflowing
+      // Long, but the multiplication below is Int * Int which is evaluated and
+      // *then* widened to Long. For nodesLength >= sqrt(Int.MaxValue) ~= 46341
+      // that Int multiplication overflows silently and stores garbage in
+      // totalCombinationsOfNodes. Widening one operand to Long forces the
+      // multiplication itself to happen in Long, preserving the full product.
+      val totalCombinationsOfNodes:Long = nodesLength.toLong * nodesLength.toLong
       val nodes4Edges: ParVector[(Int, Int)] = SupplierOfRandomness.randProbs(totalCombinationsOfNodes)().par.map(_ < edgeProbability).zipWithIndex.filter(_._1 == true).map(v => (v._2 / nodesLength, v._2 % nodesLength))
       logger.info(s"Ready to generate ${nodes4Edges.length} edge candidates")
       val edges2Add:ParVector[Action] = nodes4Edges.toVector.par.zipWithIndex.flatMap {

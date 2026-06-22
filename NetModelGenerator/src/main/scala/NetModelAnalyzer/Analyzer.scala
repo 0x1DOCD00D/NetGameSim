@@ -39,13 +39,30 @@ object Analyzer:
     // alongside their individual sizes for diagnostic context.
     logger.info(s"Detected ${components.size} cycles with sizes ${components.map(_.size).mkString("[", ", ", "]")}")
 
+    // Isomorphism diagnostic: compare the full graph against a copy with one
+    // node removed. Previously this hard-coded `.find(_.id == 3).get`, which
+    // threw NoSuchElementException on any graph that did not happen to contain
+    // a node with id 3 (e.g. the small hand-built test fixtures, or graphs
+    // whose ids start from 0 with gaps). We now safely pick a removable node
+    // — preferring id 3 for backward compatibility, otherwise falling back to
+    // any non-initState node. If the graph has nothing we can safely remove
+    // (e.g. a single-node graph), we skip the isomorphism check rather than
+    // crash, and still return the detected strongly-connected components.
     val newg = g.copy
-    newg.sm.removeNode(newg.sm.nodes().asScala.find(_.id == 3).get)
-    val jg1: Graph[NodeObject, Action] = new MutableValueGraphAdapter(newg.sm, createAction(newg.initState,newg.initState), (x: Action) => x.cost).asInstanceOf[Graph[NodeObject, Action]]
-    val vf2: VF2SubgraphIsomorphismInspector[NodeObject, Action] = new VF2SubgraphIsomorphismInspector(jg, jg1)
-    val isomorphisms = vf2.getMappings.asScala.toList
-    logger.info(s"Detected ${isomorphisms.size} isomorphic mappings")
-    isomorphisms.foreach(m => logger.info(s"Isomorphism: $m"))
+    val allNodes = newg.sm.nodes().asScala.toList
+    val nodeToRemove: Option[NodeObject] = allNodes
+      .find(_.id == 3)
+      .orElse(allNodes.find(_ != newg.initState))
+    nodeToRemove match
+      case Some(nd) =>
+        newg.sm.removeNode(nd)
+        val jg1: Graph[NodeObject, Action] = new MutableValueGraphAdapter(newg.sm, createAction(newg.initState,newg.initState), (x: Action) => x.cost).asInstanceOf[Graph[NodeObject, Action]]
+        val vf2: VF2SubgraphIsomorphismInspector[NodeObject, Action] = new VF2SubgraphIsomorphismInspector(jg, jg1)
+        val isomorphisms = vf2.getMappings.asScala.toList
+        logger.info(s"Detected ${isomorphisms.size} isomorphic mappings (removed node ${nd.id} for subgraph comparison)")
+        isomorphisms.foreach(m => logger.info(s"Isomorphism: $m"))
+      case None =>
+        logger.warn("Skipping isomorphism diagnostic: graph has no removable non-init node")
     components.map(s =>s.asScala.toSet)
 
 

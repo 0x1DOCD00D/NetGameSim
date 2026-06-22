@@ -39,14 +39,18 @@ object SupplierOfRandomness:
 //    logger.info(s"ondemand real generated $v")
     v
   end onDemandReal
+  // Every branch below previously hard-coded howMany = 1 when calling
+  // generateRandom, so randInts(N, ...) always returned a single-element
+  // vector regardless of N. The howManyNumbers parameter was silently
+  // ignored. Plumbing it through fixes the signature's stated contract.
   def randInts(howManyNumbers: Long, pminv:Int = 0, pmaxv:Int = Int.MaxValue)(using repeatable: Boolean = true): Vector[Int] =
     if pminv < 0 || pmaxv < 0 || pminv >= pmaxv then logger.error(s"randInts is called with incorrect parameters: pminv=$pminv, pmaxv=$pmaxv")
     val minv = if pminv < 0 then math.abs(pminv) else pminv
     val maxv = if pmaxv < 0 then math.abs(pmaxv) else pmaxv
-    if minv < maxv then UniformProbGenerator.generateRandom(1, true, repeatable)(minv, maxv).asInstanceOf[Vector[Int]]
-      else if minv > maxv then UniformProbGenerator.generateRandom(1, true, repeatable)(maxv, minv).asInstanceOf[Vector[Int]]
-      else if minv == maxv && maxv < Int.MaxValue then UniformProbGenerator.generateRandom(1, true, repeatable)(minv, maxv + 1).asInstanceOf[Vector[Int]]
-      else if minv == maxv && minv > 0 then UniformProbGenerator.generateRandom(1, true, repeatable)(minv - 1, maxv).asInstanceOf[Vector[Int]]
-      else UniformProbGenerator.generateRandom(1, true, repeatable).asInstanceOf[Vector[Int]]
+    if minv < maxv then UniformProbGenerator.generateRandom(howManyNumbers, true, repeatable)(minv, maxv).asInstanceOf[Vector[Int]]
+      else if minv > maxv then UniformProbGenerator.generateRandom(howManyNumbers, true, repeatable)(maxv, minv).asInstanceOf[Vector[Int]]
+      else if minv == maxv && maxv < Int.MaxValue then UniformProbGenerator.generateRandom(howManyNumbers, true, repeatable)(minv, maxv + 1).asInstanceOf[Vector[Int]]
+      else if minv == maxv && minv > 0 then UniformProbGenerator.generateRandom(howManyNumbers, true, repeatable)(minv - 1, maxv).asInstanceOf[Vector[Int]]
+      else UniformProbGenerator.generateRandom(howManyNumbers, true, repeatable).asInstanceOf[Vector[Int]]
   end randInts
   def randProbs(howManyNumbers: Long)(repeatable: Boolean = true): Vector[Double] = UniformProbGenerator.generateRandom(howManyNumbers, false, repeatable)().asInstanceOf[Vector[Double]]

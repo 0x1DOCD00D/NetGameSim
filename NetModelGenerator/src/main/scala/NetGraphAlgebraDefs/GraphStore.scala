@@ -151,9 +151,16 @@ trait GraphStore:
       }
       val g = graph(name).directed().`with`(linkedGraph.values.toList: _*).
         linkAttr().`with` ("class", "link-class").`with`(linkedGraph.values.toList: _*)
+      // Honor the outputImageFormat parameter in both the render call and the
+      // output file name. Previously those were hard-coded to Format.DOT while
+      // the log message used outputImageFormat.fileExtension, so a caller that
+      // passed Format.PNG would see a log line claiming a ".png" file was
+      // written when the actual file on disk was ".dot". The parameter was
+      // effectively dead. Using outputImageFormat consistently makes the
+      // method honor its stated contract and keeps log output truthful.
       Try(new GraphvizCmdLineEngine()).map(cmdlnEngine => cmdlnEngine.timeout(2, TimeUnit.MINUTES)).map { cmdlnEngine =>
           Graphviz.useEngine(cmdlnEngine)
-          Graphviz.fromGraph(g).render(Format.DOT).toFile(new File(s"$dir$fileName.${Format.DOT.fileExtension}"))
+          Graphviz.fromGraph(g).render(outputImageFormat).toFile(new File(s"$dir$fileName.${outputImageFormat.fileExtension}"))
         }.map(_ => NetGraph.logger.info(s"Successfully rendered the graph to $dir$fileName.${outputImageFormat.fileExtension}"))
         .recover { case e => NetGraph.logger.error(s"Failed to render the graph to $dir$fileName.${outputImageFormat.fileExtension} : ", e) }
     else
@@ -179,8 +186,10 @@ trait GraphStore:
 
       val g = graph(name).`with`(nodesMap.values.toList: _*).
         linkAttr().`with`("class", "link-class").`with`(linkedGraph: _*)
+      // Undirected branch: same fix as above — render and file name now
+      // follow outputImageFormat rather than hard-coded Format.DOT.
       Try(new GraphvizCmdLineEngine()).map(cmdlnEngine => cmdlnEngine.timeout(2, TimeUnit.MINUTES)).map { cmdlnEngine =>
           Graphviz.useEngine(cmdlnEngine)
-          Graphviz.fromGraph(g).render(Format.DOT).toFile(new File(s"$dir$fileName.${Format.DOT.fileExtension}"))
+          Graphviz.fromGraph(g).render(outputImageFormat).toFile(new File(s"$dir$fileName.${outputImageFormat.fileExtension}"))
         }.map(_ => NetGraph.logger.info(s"Successfully rendered the graph to $dir$fileName.${outputImageFormat.fileExtension}"))
         .recover { case e => NetGraph.logger.error(s"Failed to render the graph to $dir$fileName.${outputImageFormat.fileExtension} : ", e) }
