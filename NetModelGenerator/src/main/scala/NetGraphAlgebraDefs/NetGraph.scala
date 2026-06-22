@@ -288,12 +288,36 @@ object NetGraph:
        import io.circe.parser._
        import io.circe.syntax._
 
-       val json = Source.fromFile(s"$dir$fileName").mkString
-       val arr = json.split("\n")
-       val nodes: List[NodeObject] = decode[Set[NodeObject]](arr.head).right.get.toList
-       val edges: List[Action] = decode[Set[Action]](arr.last).right.get.toList
-       logger.info(s"Deserialized ${nodes.length} nodes and ${edges.length} edges from JSON")
-       NetModelAlgebra(nodes, edges)
+       // JSON load path. Two defensive improvements over the original:
+       //  1. Source.fromFile is wrapped in Using so the backing file handle
+       //     is always released. Previously the stream was only consumed
+       //     via .mkString and never closed, leaking one handle per call.
+       //  2. decode[...].right.get is replaced with explicit pattern
+       //     matching on Either. Before, a malformed JSON payload threw
+       //     NoSuchElementException and crashed the caller; now it logs a
+       //     clear error and returns None, which is consistent with the
+       //     Option[NetGraph] contract already used by the binary branch.
+       Using(Source.fromFile(s"$dir$fileName"))(_.mkString).toOption.flatMap { json =>
+         val arr = json.split("\n")
+         if arr.length < 2 then
+           logger.error(s"JSON graph file $dir$fileName is malformed: expected at least two lines (nodes, edges)")
+           None
+         else
+           val nodesEither = decode[Set[NodeObject]](arr.head)
+           val edgesEither = decode[Set[Action]](arr.last)
+           (nodesEither, edgesEither) match
+             case (Right(ns), Right(es)) =>
+               val nodes = ns.toList
+               val edges = es.toList
+               logger.info(s"Deserialized ${nodes.length} nodes and ${edges.length} edges from JSON")
+               NetModelAlgebra(nodes, edges)
+             case (Left(err), _) =>
+               logger.error(s"Failed to decode nodes from $dir$fileName: ${err.getMessage}")
+               None
+             case (_, Left(err)) =>
+               logger.error(s"Failed to decode edges from $dir$fileName: ${err.getMessage}")
+               None
+       }
    end load
 
    @main def runMain_NetGraph(): Unit =

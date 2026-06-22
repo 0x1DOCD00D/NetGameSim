@@ -9,7 +9,7 @@ import guru.nidi.graphviz.attribute.{Color, Font, Label, LinkAttr, Rank, Style}
 
 import scala.jdk.CollectionConverters.*
 import scala.jdk.OptionConverters._
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Success, Try, Using}
 import guru.nidi.graphviz.engine.{EngineResult, Format, Graphviz, GraphvizCmdLineEngine, GraphvizJdkEngine, GraphvizServerEngine}
 import guru.nidi.graphviz.model.Factory.{graph, linkAttrs, node, to}
 import guru.nidi.graphviz.model.{Graph, Node}
@@ -36,7 +36,12 @@ trait GraphStore:
     val outputGraphRepresentation = config.getConfig("NGSimulator").getConfig("OutputGraphRepresentation").getString("contentType")
     val graphDirectionality = config.getConfig("NGSimulator").getConfig("Graph").getString("directionality")
     if (outputGraphRepresentation == "json") then
-        Try {
+        // JSON export. Previously the FileWriter was constructed inside a Try
+        // block and closed only on the happy path, so any exception thrown
+        // by write() (e.g. disk full, I/O error) would leak the file handle
+        // because close() was never reached. Wrapping in Using guarantees
+        // the handle is released in every code path via try-with-resources.
+        Using(new FileWriter(s"$dir$fileName")) { file =>
           val nodesInGraph: String = sm.nodes().asScala.asJson.noSpaces
           val edgesInGraph: String = sm.edges().asScala.toList.map { edge =>
             val edgeValue = (if (graphDirectionality == "undirected") then
@@ -51,9 +56,7 @@ trait GraphStore:
             }
           }.asJson.noSpaces
 
-          val file = new FileWriter(s"$dir$fileName")
           file.write(nodesInGraph + "\n" + edgesInGraph)
-          file.close()
         }.map(_ => NetGraph.logger.info(s"Successfully persisted the graph in json to $dir$fileName"))
           .recover { case e => NetGraph.logger.error(s"Failed to persist the graph in json to $dir$fileName : ", e) }
     else if (outputGraphRepresentation == "yaml") then
@@ -61,7 +64,9 @@ trait GraphStore:
         // to inspect visually than binary .ngs or dense JSON. The format lists every node
         // with its properties followed by every edge with its action attributes. This uses
         // the same directionality-aware edge value retrieval as the JSON and binary formats.
-        Try {
+        // FileWriter is wrapped in Using so the file handle is released even if write()
+        // throws mid-stream (same leak that the JSON branch suffered from previously).
+        Using(new FileWriter(s"$dir$fileName")) { file =>
           val sb = new StringBuilder
           sb.append("# NetGameSim graph exported in YAML format\n")
           sb.append(s"directionality: $graphDirectionality\n")
@@ -98,9 +103,7 @@ trait GraphStore:
                 NetGraph.logger.warn("Encountered edge without a value during YAML export, skipping")
             }
           }
-          val file = new FileWriter(s"$dir$fileName")
           file.write(sb.toString)
-          file.close()
         }.map(_ => NetGraph.logger.info(s"Successfully persisted the graph in yaml to $dir$fileName"))
           .recover { case e => NetGraph.logger.error(s"Failed to persist the graph in yaml to $dir$fileName : ", e) }
     else {
@@ -115,11 +118,21 @@ trait GraphStore:
           sm.edgeValue(edge.source(), edge.target())
           ).get
       }.asInstanceOf[List[NetGraphComponent]]
-      Try(new FileOutputStream(s"$dir$fileName", false)).map(fos => new ObjectOutputStream(fos)).map { oos =>
+      // Binary .ngs export. The previous .map chain had two leak paths:
+      //   (a) if `new ObjectOutputStream(fos)` threw, the outer
+      //       FileOutputStream was never closed.
+      //   (b) if `writeObject` threw before the explicit `oos.close()` line,
+      //       neither stream was closed.
+      // Nesting two Using blocks guarantees both streams are released in
+      // every exit path. FileOutputStream.close() is idempotent, so the
+      // redundant inner close (via ObjectOutputStream) followed by the
+      // outer Using's close is safe.
+      Using(new FileOutputStream(s"$dir$fileName", false)) { fos =>
+        Using(new ObjectOutputStream(fos)) { oos =>
           oos.writeObject(fullGraphAsList)
           oos.flush()
-          oos.close()
-        }.map(_ => NetGraph.logger.info(s"Successfully persisted the graph to $dir$fileName"))
+        }.get
+      }.map(_ => NetGraph.logger.info(s"Successfully persisted the graph to $dir$fileName"))
         .recover { case e => NetGraph.logger.error(s"Failed to persist the graph to $dir$fileName : ", e) }
     }
 
